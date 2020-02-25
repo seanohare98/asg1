@@ -1,52 +1,4 @@
-#include <arpa/inet.h>
-#include <errno.h>
-#include <netinet/in.h>
-#include <pthread.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h>
-#define MAX_CONNECTIONS 2
-
-// to be passed as pthread args
-struct threadData
-{
-  pthread_t thread;
-  int id;
-  int sd;
-};
-
-// allocate memory for max client connections
-typedef struct group
-{
-  struct threadData workers[MAX_CONNECTIONS];
-  // = malloc(sizeof(pthread_t) * MAX_CONNECTIONS);
-  int size;
-} threadGroup;
-
-// send/recieve packet struct
-struct message_s
-{
-  unsigned char protocol[5]; //  protocol string (5 bytes)
-  unsigned char type;        //  type (1 byte)
-  unsigned int length;       //  length (header + payload) (4 bytes)
-} __attribute__((packed));
-
-// declare threads and mutex
-threadGroup threads;
-pthread_mutex_t thread_mutex;
-
-// network protocol to host conversion
-struct message_s *nptoh(struct message_s *packet)
-{
-  struct message_s *converted = (struct message_s *)malloc(sizeof(struct message_s));
-  converted->type = ntohs(packet->type);
-  converted->length = ntohs(packet->length);
-
-  return converted;
-}
+#include "myftpserver.h"
 
 // worker threads to handle client connections
 void *connection_handler(void *sDescriptor)
@@ -62,15 +14,15 @@ void *connection_handler(void *sDescriptor)
     bytes = recv(data.sd, packet, sizeof(struct message_s), 0);
     if (bytes == 0)
     {
-      printf("Connection closed by client\n");
+      printf("Connection closed\n");
       pthread_mutex_lock(&thread_mutex);
       threads.size--;
       pthread_mutex_unlock(&thread_mutex);
       break;
     }
 
-    convertedPacket = ntohp(packet);
-    printf("[%d]command #%d\n", data.sd, convertedPacket->length);
+    // convertedPacket = ntohp(packet);
+    // printf("[%d]command #%d\n", data.sd, convertedPacket->length);
   }
   pthread_exit(NULL);
 }
@@ -80,7 +32,7 @@ int main(int argc, char **argv)
   // check if port was provided
   if (argc < 2)
   {
-    printf("ERROR: please provide port\n");
+    printf("Error: please provide port\n");
     exit(1);
   }
 
@@ -88,7 +40,7 @@ int main(int argc, char **argv)
   threads.size = 0;
   pthread_mutex_init(&thread_mutex, NULL);
 
-  // set up socket with specified port
+  // set up socket with specified ip:port
   int port = atoi(argv[1]);
   int sd = socket(AF_INET, SOCK_STREAM, 0);
   int client_sd, new_sd;
@@ -102,14 +54,14 @@ int main(int argc, char **argv)
   // bind socket
   if (bind(sd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
   {
-    printf("bind error: %s (Errno:%d)\n", strerror(errno), errno);
+    printf("Bind Error: %s (Errno:%d)\n", strerror(errno), errno);
     exit(0);
   }
 
   // listen for connections (backlog of 10)
   if (listen(sd, 10) < 0)
   {
-    printf("listen error: %s (Errno:%d)\n", strerror(errno), errno);
+    printf("Listen Error: %s (Errno:%d)\n", strerror(errno), errno);
     exit(0);
   }
 
@@ -122,13 +74,13 @@ int main(int argc, char **argv)
     client_sd = accept(sd, (struct sockaddr *)&client_addr, &addr_len);
     if (client_sd < 0)
     {
-      printf("accept error: %s (Errno:%d)\n", strerror(errno), errno);
+      printf("Accept Error: %s (Errno:%d)\n", strerror(errno), errno);
       exit(0);
     }
     // check if max connections reached
     else if (threads.size == MAX_CONNECTIONS - 1)
     {
-      printf("Too many connections!\n");
+      printf("Too many active connections...\n");
       continue;
     }
     // create new thread from group

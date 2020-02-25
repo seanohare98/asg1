@@ -1,4 +1,5 @@
 .DS-Store
+.vscode
 Description.pdf
 myftpclient
 myftpserver
