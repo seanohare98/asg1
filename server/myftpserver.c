@@ -10,6 +10,7 @@
 #include <unistd.h>
 #define MAX_CONNECTIONS 2
 
+// to be passed as pthread args
 struct threadData
 {
   pthread_t thread;
@@ -17,6 +18,7 @@ struct threadData
   int sd;
 };
 
+// allocate memory for max client connections
 typedef struct group
 {
   struct threadData workers[MAX_CONNECTIONS];
@@ -24,6 +26,7 @@ typedef struct group
   int size;
 } threadGroup;
 
+// send/recieve packet struct
 struct message_s
 {
   unsigned char protocol[5]; //  protocol string (5 bytes)
@@ -31,10 +34,12 @@ struct message_s
   unsigned int length;       //  length (header + payload) (4 bytes)
 } __attribute__((packed));
 
+// declare threads and mutex
 threadGroup threads;
 pthread_mutex_t thread_mutex;
 
-struct message_s *ntohp(struct message_s *packet)
+// network protocol to host conversion
+struct message_s *nptoh(struct message_s *packet)
 {
   struct message_s *converted = (struct message_s *)malloc(sizeof(struct message_s));
   converted->type = ntohs(packet->type);
@@ -43,7 +48,7 @@ struct message_s *ntohp(struct message_s *packet)
   return converted;
 }
 
-//worker threads to handle clients
+// worker threads to handle client connections
 void *connection_handler(void *sDescriptor)
 {
   printf("We in a new thread\n");
@@ -72,14 +77,14 @@ void *connection_handler(void *sDescriptor)
 
 int main(int argc, char **argv)
 {
-  //check if port was provided
+  // check if port was provided
   if (argc < 2)
   {
     printf("ERROR: please provide port\n");
     exit(1);
   }
 
-  //set up threadList and initiate mutex
+  // set up threadList and initiate mutex
   threads.size = 0;
   pthread_mutex_init(&thread_mutex, NULL);
 
@@ -120,13 +125,13 @@ int main(int argc, char **argv)
       printf("accept error: %s (Errno:%d)\n", strerror(errno), errno);
       exit(0);
     }
-    //check if max connections reached
+    // check if max connections reached
     else if (threads.size == MAX_CONNECTIONS - 1)
     {
       printf("Too many connections!\n");
       continue;
     }
-    //create new thread from group
+    // create new thread from group
     else
     {
       threads.workers[threads.size].sd = client_sd;
@@ -137,6 +142,7 @@ int main(int argc, char **argv)
       }
       else
       {
+        //move pointer to next available worker thread
         pthread_mutex_lock(&thread_mutex);
         threads.size++;
         pthread_mutex_unlock(&thread_mutex);
