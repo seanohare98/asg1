@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#define MAX_CONNECTIONS 10
+#define MAX_CONNECTIONS 2
 
 struct threadData
 {
@@ -109,10 +109,11 @@ int main(int argc, char **argv)
   }
 
   // keep socket open
-  printf("Server listening on port\n");
+  printf("Server listening on port %d\n", port);
   addr_len = sizeof(client_addr);
   while (1)
   {
+    printf("Threads in use: %d\n", threads.size + 1);
     client_sd = accept(sd, (struct sockaddr *)&client_addr, &addr_len);
     if (client_sd < 0)
     {
