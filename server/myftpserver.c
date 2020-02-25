@@ -8,8 +8,21 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #define MAX_CONNECTIONS 10
+
+struct threadData
+{
+  pthread_t thread;
+  int id;
+  int sd;
+};
+
+typedef struct group
+{
+  struct threadData workers[MAX_CONNECTIONS];
+  // = malloc(sizeof(pthread_t) * MAX_CONNECTIONS);
+  int size;
+} threadGroup;
 
 struct message_s
 {
@@ -18,16 +31,42 @@ struct message_s
   unsigned int length;       //  length (header + payload) (4 bytes)
 } __attribute__((packed));
 
-/*
- * Worker thread to send replies (list_reply, get_reply, put_reply, file_data)
- */
+threadGroup threads;
+pthread_mutex_t thread_mutex;
+
+struct message_s *ntohp(struct message_s *packet)
+{
+  struct message_s *converted = (struct message_s *)malloc(sizeof(struct message_s));
+  converted->type = ntohs(packet->type);
+  converted->length = ntohs(packet->length);
+
+  return converted;
+}
+
+//worker threads to handle clients
 void *connection_handler(void *sDescriptor)
 {
+  printf("We in a new thread\n");
   int newSocket = *((int *)sDescriptor);
-  printf("The new socker = %d\n", newSocket);
-  printf("we in a new thread\n");
-  sleep(1999);
-  close(newSocket);
+  int bytes;
+  struct threadData data = *(struct threadData *)sDescriptor;
+  struct message_s *packet = (struct message_s *)malloc(sizeof(struct message_s)), *convertedPacket;
+
+  while (1)
+  {
+    bytes = recv(data.sd, packet, sizeof(struct message_s), 0);
+    if (bytes == 0)
+    {
+      printf("Connection closed by client\n");
+      pthread_mutex_lock(&thread_mutex);
+      threads.size--;
+      pthread_mutex_unlock(&thread_mutex);
+      break;
+    }
+
+    convertedPacket = ntohp(packet);
+    printf("[%d]command #%d\n", data.sd, convertedPacket->length);
+  }
   pthread_exit(NULL);
 }
 
@@ -40,13 +79,16 @@ int main(int argc, char **argv)
     exit(1);
   }
 
+  //set up threadList and initiate mutex
+  threads.size = 0;
+  pthread_mutex_init(&thread_mutex, NULL);
+
   // set up socket with specified port
   int port = atoi(argv[1]);
   int sd = socket(AF_INET, SOCK_STREAM, 0);
   int client_sd, new_sd;
   socklen_t addr_len;
   struct sockaddr_in server_addr, client_addr;
-  pthread_t *threadGroup = malloc(sizeof(pthread_t) * MAX_CONNECTIONS);
   memset(&server_addr, 0, sizeof(server_addr));
   server_addr.sin_family = AF_INET;
   server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -67,30 +109,37 @@ int main(int argc, char **argv)
   }
 
   // keep socket open
-  int threadCount = 0;
+  printf("Server listening on port\n");
+  addr_len = sizeof(client_addr);
   while (1)
   {
-    addr_len = sizeof(client_addr);
     client_sd = accept(sd, (struct sockaddr *)&client_addr, &addr_len);
     if (client_sd < 0)
     {
       printf("accept error: %s (Errno:%d)\n", strerror(errno), errno);
       exit(0);
     }
+    //check if max connections reached
+    else if (threads.size == MAX_CONNECTIONS - 1)
+    {
+      printf("Too many connections!\n");
+      continue;
+    }
+    //create new thread from group
     else
     {
-      if (pthread_create(&threadGroup[threadCount], NULL, connection_handler, &client_sd) != 0)
+      threads.workers[threads.size].sd = client_sd;
+      threads.workers[threads.size].id = threads.size;
+      if (pthread_create(&threads.workers[threads.size].thread, NULL, connection_handler, (void *)&threads.workers[threads.size]) != 0)
+      {
         printf("Failed to make thread\n");
+      }
       else
-        threadCount++;
-    }
-
-    //re-join threads once all 10 are used up
-    if (threadCount >= 10)
-    {
-      for (int i = 0; i < 10; i++)
-        pthread_join(threadGroup[i], NULL);
-      threadCount = 0;
+      {
+        pthread_mutex_lock(&thread_mutex);
+        threads.size++;
+        pthread_mutex_unlock(&thread_mutex);
+      }
     }
   }
 
