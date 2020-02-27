@@ -76,7 +76,7 @@ int main(int argc, char **argv)
         pthread_mutex_lock(&thread_mutex);
         threads.size++;
         pthread_mutex_unlock(&thread_mutex);
-        printf("Threads in use: %d\n", threads.size);
+        // printf("Threads in use: %d\n", threads.size);
       }
     }
   }
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 void *connection_handler(void *sDescriptor)
 {
   // set up descriptor, packet, convertedPacket
-  printf("New thread created\n");
+  // printf("New thread created\n");
   int bytes;
   struct threadData data = *(struct threadData *)sDescriptor;
   struct message_s *packet = (struct message_s *)malloc(sizeof(struct message_s));
@@ -310,6 +310,7 @@ void *connection_handler(void *sDescriptor)
 
       // recieve FILE_DATA header
       recv(data.sd, newPacket, sizeof(struct message_s), 0);
+      newPacket = ntohp(newPacket);
       fileSize = newPacket->length - 6;
 
       // recieve file;

@@ -145,6 +145,7 @@ int main(int argc, char **argv)
     {
       // recieve FILE_DATA header
       recv(sd, convertedPacket, sizeof(struct message_s), 0);
+      convertedPacket = ntohp(convertedPacket);
       fileSize = convertedPacket->length - 6;
 
       //clear/create file and write to it
