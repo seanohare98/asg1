@@ -58,7 +58,7 @@ int sendFile(int sd, FILE *fp, int fileSize)
       toRead = remainingBytes;
 
     bytes = fread(reply->fileName, sizeof(char), toRead, fp);
-    printf("%d  %d\n", bytes, toRead);
+    // printf("%d  %d\n", bytes, toRead);
 
     // upon successful read
     if (bytes > 0)
@@ -125,7 +125,7 @@ int recFile(int sd, FILE *fp, int fileSize)
     else
       toWrite = remainingBytes;
 
-    printf("%d\n", toWrite);
+    // printf("%d\n", toWrite);
     fwrite(reply->fileName, sizeof(char), toWrite, fp);
     remainingBytes -= bytes;
   }
