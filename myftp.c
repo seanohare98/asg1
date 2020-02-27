@@ -119,15 +119,15 @@ int recFile(int sd, FILE *fp, int fileSize)
       fprintf(stderr, "Error receiving file\n");
       return -1;
     }
-    else
-      remainingBytes -= bytes;
 
     if (remainingBytes >= 1024)
       toWrite = 1024;
     else
       toWrite = remainingBytes;
 
+    printf("%d\n", toWrite);
     fwrite(reply->fileName, sizeof(char), toWrite, fp);
+    remainingBytes -= bytes;
   }
 
   fclose(fp);
