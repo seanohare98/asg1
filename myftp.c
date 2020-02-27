@@ -116,7 +116,7 @@ int recFile(int sd, FILE *fp, int fileSize)
     else
       remainingBytes -= bytes;
 
-    fwrite(reply->fileName, 1, sizeof(reply->fileName), fp);
+    fwrite(reply->fileName, 1, bytes, fp);
   }
 
   fclose(fp);
