@@ -1,38 +1,11 @@
 #include "myftpserver.h"
 
-// worker threads to handle client connections
-void *connection_handler(void *sDescriptor)
-{
-  printf("We in a new thread\n");
-  int newSocket = *((int *)sDescriptor);
-  int bytes;
-  struct threadData data = *(struct threadData *)sDescriptor;
-  struct message_s *packet = (struct message_s *)malloc(sizeof(struct message_s)), *convertedPacket;
-
-  while (1)
-  {
-    bytes = recv(data.sd, packet, sizeof(struct message_s), 0);
-    if (bytes == 0)
-    {
-      printf("Connection closed\n");
-      pthread_mutex_lock(&thread_mutex);
-      threads.size--;
-      pthread_mutex_unlock(&thread_mutex);
-      break;
-    }
-
-    // convertedPacket = ntohp(packet);
-    // printf("[%d]command #%d\n", data.sd, convertedPacket->length);
-  }
-  pthread_exit(NULL);
-}
-
 int main(int argc, char **argv)
 {
   // check if port was provided
   if (argc < 2)
   {
-    printf("Error: please provide port\n");
+    printf("Error: Too few arguments\n");
     exit(1);
   }
 
@@ -43,6 +16,12 @@ int main(int argc, char **argv)
   // set up socket with specified ip:port
   int port = atoi(argv[1]);
   int sd = socket(AF_INET, SOCK_STREAM, 0);
+  long val = 1;
+  if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(long)) == -1)
+  {
+    perror("Error: Setsockopt\n");
+    exit(1);
+  }
   int client_sd, new_sd;
   socklen_t addr_len;
   struct sockaddr_in server_addr, client_addr;
@@ -70,7 +49,6 @@ int main(int argc, char **argv)
   addr_len = sizeof(client_addr);
   while (1)
   {
-    printf("Threads in use: %d\n", threads.size + 1);
     client_sd = accept(sd, (struct sockaddr *)&client_addr, &addr_len);
     if (client_sd < 0)
     {
@@ -98,9 +76,255 @@ int main(int argc, char **argv)
         pthread_mutex_lock(&thread_mutex);
         threads.size++;
         pthread_mutex_unlock(&thread_mutex);
+        printf("Threads in use: %d\n", threads.size);
       }
     }
   }
 
+  return 0;
+}
+
+// worker threads to handle client connections
+void *connection_handler(void *sDescriptor)
+{
+  // set up descriptor, packet, convertedPacket
+  printf("New thread created\n");
+  int bytes;
+  struct threadData data = *(struct threadData *)sDescriptor;
+  struct message_s *packet = (struct message_s *)malloc(sizeof(struct message_s));
+  struct message_s *convertedPacket;
+
+  while (1)
+  {
+    // recieve header
+    // printf("Trying to recieve header\n");
+    bytes = recv(data.sd, packet, sizeof(struct message_s), 0);
+    // printf("Successfully recieved header\n");
+
+    // nothing being sent from client
+    if (bytes == 0)
+    {
+      printf("Connection closed\n");
+      pthread_mutex_lock(&thread_mutex);
+      threads.size--;
+      pthread_mutex_unlock(&thread_mutex);
+      break;
+    }
+
+    // convert header into host protocol
+    convertedPacket = ntohp(packet);
+
+    // LIST_REPLY
+    if (convertedPacket->type == ((unsigned char)0xA1))
+    {
+
+      struct message_s *newPacket = (struct message_s *)malloc(sizeof(struct message_s));
+      DIR *dir;
+      struct dirent *sd;
+
+      // build header packet
+      unsigned char myftp[6] = "myftp";
+      myftp[5] = '\0';
+      memcpy(newPacket->protocol, myftp, 5);
+      newPacket->type = 0xA2;
+      newPacket->length = 6;
+
+      // append file name sizes to newPacket->length
+      if ((dir = opendir("./data")) != NULL)
+        while ((sd = readdir(dir)) != NULL)
+          newPacket->length += strlen(sd->d_name);
+      closedir(dir);
+
+      // convert header packet to network protocol
+      newPacket = htonp(newPacket);
+
+      // printf("Trying to send packet: LIST_REPLY\n");
+
+      // send header packet
+      if ((send(data.sd, newPacket, sizeof(struct message_s), 0)) < 0)
+      {
+        printf("Error sending packets: %s (Errno:%d)\n", strerror(errno), errno);
+        exit(0);
+      }
+
+      // printf("Trying to send packet: LIST_REPLY Payload\n");
+
+      payload *reply = (payload *)malloc(sizeof(payload));
+      memset(reply->fileName, '\0', sizeof(reply->fileName));
+
+      // list dir contents
+      if ((dir = opendir("./data")) != NULL)
+      {
+        // while director isn't empty, send payload with null terminated file name
+        while ((sd = readdir(dir)) != NULL)
+        {
+          reply->done = 'n';
+          strcpy(reply->fileName, sd->d_name);
+          if (send(data.sd, reply, sizeof(payload), 0) < 0)
+          {
+            printf("Error sending packet(s): %s (Errno:%d)\n", strerror(errno), errno);
+            exit(0);
+          }
+        }
+      }
+      reply->done = 'y';
+      if (send(data.sd, reply, sizeof(payload), 0) < 0)
+      {
+        printf("Error sending packet(s): %s (Errno:%d)\n", strerror(errno), errno);
+        exit(0);
+      }
+      closedir(dir);
+      printf("LIST_REPLY protocol sent\n");
+      pthread_mutex_lock(&thread_mutex);
+      threads.size--;
+      pthread_mutex_unlock(&thread_mutex);
+      break;
+    }
+
+    // GET_REPLY
+    else if (convertedPacket->type == ((unsigned char)0xB1))
+    {
+      int fileSize;
+      char filePath[1024] = "./data/";
+      FILE *fGET;
+      struct readFile *get = (struct readFile *)malloc(sizeof(struct readFile));
+      memset(get->fileName, '\0', sizeof(get->fileName));
+
+      // printf("Waiting for payload...\n");
+
+      // recieve payload
+      recv(data.sd, get, sizeof(struct readFile), 0);
+
+      // printf("Recieved payload\n");
+
+      //build reply
+      struct message_s *newPacket = (struct message_s *)malloc(sizeof(struct message_s));
+      newPacket->length = 6;
+
+      //check if file exists
+      strcat(filePath, get->fileName);
+      fGET = fopen(filePath, "rb");
+
+      if (!fGET)
+      {
+        newPacket->type = 0xB3; //file doesn't exist
+      }
+      else
+      {
+        newPacket->type = 0xB2; //file does exist
+        fseek(fGET, 0L, SEEK_END);
+        fileSize = ftell(fGET);
+        fseek(fGET, 0L, SEEK_SET);
+      }
+
+      // convert reply to network protocol
+      newPacket->length += strlen(get->fileName);
+      newPacket = htonp(newPacket);
+
+      // printf("Trying to send packet: GET_REPLY\n");
+
+      // send reply
+      if ((send(data.sd, newPacket, sizeof(struct message_s), 0)) < 0)
+      {
+        printf("Error sending packets: %s (Errno:%d)\n", strerror(errno), errno);
+        exit(0);
+      }
+
+      // printf("Sent packet. Building payload...\n");
+
+      // if file exists, send it
+      if (newPacket->type == 0xB2)
+      {
+
+        //build FILE_DATA header
+        unsigned char myftp[6] = "myftp";
+        myftp[5] = '\0';
+        memcpy(newPacket->protocol, myftp, 5);
+        newPacket->type = 0xFF;
+        newPacket->length = 6 + fileSize;
+        newPacket = htonp(newPacket);
+
+        // send FILE_DATA header
+        if ((send(data.sd, newPacket, sizeof(struct message_s), 0)) < 0)
+        {
+          printf("Error sending packets: %s (Errno:%d)\n", strerror(errno), errno);
+          exit(0);
+        }
+
+        // printf("Trying to send FILE_DATA PAyload\n");
+
+        //send file
+        if (sendFile(data.sd, fGET, fileSize) == 0)
+          printf("FILE_DATA protocol sent\n");
+      }
+      // else, exit thread
+      else
+        printf("GET_REPLY protocol sent\n");
+      pthread_mutex_lock(&thread_mutex);
+      threads.size--;
+      pthread_mutex_unlock(&thread_mutex);
+      break;
+    }
+
+    // PUT_REPLY
+    else if (convertedPacket->type == ((unsigned char)0xC1))
+    {
+      int fileSize;
+      char filePath[1024] = "./data/";
+      struct readFile *get = (struct readFile *)malloc(sizeof(struct readFile));
+      memset(get->fileName, '\0', sizeof(get->fileName));
+
+      // printf("Waiting for payload...\n");
+
+      // recieve payload
+      recv(data.sd, get, sizeof(struct readFile), 0);
+
+      // printf("Recieved payload\n");
+
+      //clear file and open for writing
+      FILE *fClear, *fWrite;
+      strcat(filePath, get->fileName);
+      fClear = fopen(filePath, "wb");
+      fclose(fClear);
+      fWrite = fopen(filePath, "ab");
+
+      //build reply
+      struct message_s *newPacket = (struct message_s *)malloc(sizeof(struct message_s));
+      unsigned char myftp[6] = "myftp";
+      myftp[5] = '\0';
+      memcpy(newPacket->protocol, myftp, 5);
+      newPacket->type = 0xC2;
+      newPacket->length = 6;
+
+      // convert newPacket to network protocol
+      newPacket = htonp(newPacket);
+
+      // send reply
+      if ((send(data.sd, newPacket, sizeof(struct message_s), 0)) < 0)
+      {
+        printf("Error sending packets: %s (Errno:%d)\n", strerror(errno), errno);
+        exit(0);
+      }
+
+      // printf("Sent packet. Waiting for reply...\n");
+
+      // recieve FILE_DATA header
+      recv(data.sd, newPacket, sizeof(struct message_s), 0);
+      fileSize = newPacket->length - 6;
+
+      // recieve file;
+      if (newPacket->type == ((unsigned char)0xFF))
+      {
+        if (recFile(data.sd, fWrite, fileSize) == 0)
+          printf("FILE_DATA protocol recieved\n");
+      }
+
+      fclose(fWrite);
+      pthread_mutex_lock(&thread_mutex);
+      threads.size--;
+      pthread_mutex_unlock(&thread_mutex);
+      break;
+    }
+  }
   return 0;
 }

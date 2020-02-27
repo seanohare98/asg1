@@ -1,3 +1,4 @@
+// common libraries
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -11,7 +12,7 @@
 #include <dirent.h>
 #include <pthread.h>
 
-// packet struct to be sent/recieved
+// header struct
 struct message_s
 {
   unsigned char protocol[5]; //  protocol string (5 bytes)
@@ -19,6 +20,15 @@ struct message_s
   unsigned int length;       //  length (header + payload) (4 bytes)
 } __attribute__((packed));
 
+// payload struct
+typedef struct readFile
+{
+  char fileName[1024];
+  char done;
+} payload;
+
+// common function declarations
 struct message_s *ntohp(struct message_s *packet);
-void sendF(struct message_s *, int, FILE *);
-void recF(struct message_s *, struct message_s *, int, FILE *);
+struct message_s *htonp(struct message_s *packet);
+int sendFile(int sd, FILE *fp, int fileSize);
+int recFile(int sd, FILE *FP, int fileSize);

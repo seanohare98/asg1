@@ -18,8 +18,9 @@ typedef struct group
   int size;
 } threadGroup;
 
+// global variable declarations
 threadGroup threads;
 pthread_mutex_t thread_mutex;
-struct message_s *ntohp(struct message_s *packet);
+
+// function declarations
 void *connection_handler(void *sDescriptor);
-void *list_reply(void *sDescriptor);
