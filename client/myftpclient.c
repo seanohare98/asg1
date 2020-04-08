@@ -43,9 +43,9 @@ int main(int argc, char **argv)
   }
   else
   {
-    fscanf(getConfig, "%d", &settings->n);
-    fscanf(getConfig, "%d", &settings->k);
-    fscanf(getConfig, "%u", &settings->block_size);
+    fscanf(getConfig, "%d ", &settings->n);
+    fscanf(getConfig, "%d ", &settings->k);
+    fscanf(getConfig, "%u ", &settings->block_size);
     printf("%d\t%d\t%d\n", settings->n, settings->k, settings->block_size);
     fseek(getConfig, 0L, SEEK_SET);
     char line[256];
@@ -54,43 +54,40 @@ int main(int argc, char **argv)
     {
       // printf("lineNum: %d\t", lineNum);
       // printf("text: %s\n", line);
+
       if (lineNum >= 3)
       {
-        int server_num = lineNum - 3;
-        strcpy(settings->server_list[server_num].address, strtok(line, ":"));
-        printf("Address: %s\t", settings->server_list[server_num].address);
-        strcpy(settings->server_list[server_num].port, &line[12]);
-        printf("Port: %s\n", settings->server_list[server_num].port);
+        strcpy(settings->server_list[lineNum - 3].address, strtok(line, ":"));
+        strcpy(settings->server_list[lineNum - 3].port, &line[12]);
+        printf("Address: %s\t", settings->server_list[lineNum - 3].address);
+        printf("Port: %s\n", settings->server_list[lineNum - 3].port);
       }
       lineNum++;
     }
     fclose(getConfig);
   }
-  printf("%d", settings->n);
-  for (int i = 0; i < settings->n; i++)
+  int currentServer = 0;
+  while (currentServer < settings->n)
   {
-    printf("check...");
-    int port = atoi(settings->server_list[i].port);
-    printf("check...");
-
-    settings->server_list[i].sd = socket(AF_INET, SOCK_STREAM, 0);
-    printf("check...");
-
+    int port = atoi(settings->server_list[currentServer].port);
+    settings->server_list[currentServer].sd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = inet_addr(settings->server_list[i].address);
+    server_addr.sin_addr.s_addr = inet_addr(settings->server_list[currentServer].address);
     server_addr.sin_port = htons(port);
-    // connect to server
-    if (connect(settings->server_list[i].sd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    //connect to server
+    if (connect(settings->server_list[currentServer].sd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
       printf("Connection error: %s (Errno:%d)\n", strerror(errno), errno);
-      // memcpy(settings->server_list[i].isActive, 0);
+
+      settings->server_list[currentServer].isActive = 0;
     }
     else
     {
-      // settings->server_list[i].isActive = 1;
+      settings->server_list[currentServer].isActive = 1;
     }
+    currentServer++;
   }
 
   // // LIST_REQUEST
