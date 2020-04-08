@@ -152,7 +152,7 @@ void *connection_handler(void *sDescriptor)
       memset(reply->fileName, '\0', sizeof(reply->fileName));
       DIR *dir;
       struct dirent *sd;
-
+      printf("HERE");
       // list dir contents
       if ((dir = opendir("./data")) != NULL)
       {

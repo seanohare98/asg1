@@ -1,5 +1,4 @@
 #include "../myftp.h"
-
 #define MAX_CONNECTIONS 10
 
 typedef struct deployment

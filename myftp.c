@@ -5,16 +5,8 @@ struct message_s *ntohp(struct message_s *packet)
 {
   struct message_s *converted = (struct message_s *)malloc(sizeof(struct message_s));
   memcpy(converted->protocol, packet->protocol, 5);
-  // strcpy(converted->protocol, packet->protocol);
   converted->type = packet->type;
   converted->length = (unsigned int)ntohs(packet->length);
-
-  // printf("Protocol: %s\n", packet->protocol);
-  // printf("Type Before: %x\n", packet->type);
-  // printf("Type After: %x\n", (unsigned char)htons(packet->type));
-  // printf("Type After in Converted: %x\n", (unsigned char)converted->type);
-  // printf("Length in Converted: %d\n", (unsigned int)converted->length);
-
   return converted;
 }
 
@@ -23,15 +15,8 @@ struct message_s *htonp(struct message_s *packet)
 {
   struct message_s *converted = (struct message_s *)malloc(sizeof(struct message_s));
   memcpy(converted->protocol, packet->protocol, 5);
-  // strcpy(converted->protocol, packet->protocol);
   converted->type = packet->type;
   converted->length = (unsigned int)htons(packet->length);
-
-  // printf("Protocol: %s\n", packet->protocol);
-  // printf("Type Before: %x\n", packet->type);
-  // printf("Type After: %x\n", (unsigned char)htons(packet->type));
-  // printf("Type After in Converted: %x\n", (unsigned char)converted->type);
-  // printf("Length in Converted: %d\n", (unsigned int)converted->length);
   return converted;
 }
 
@@ -139,6 +124,3 @@ int recFile(int sd, FILE *fp, int fileSize)
 //   // ceil( file_size / (block_size * k))
 //   // n - k blocks are reserved for parity
 // }
-
-// store metadata for file size, and block numbers
-// metadata number of stripes and blocks
