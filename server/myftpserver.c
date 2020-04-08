@@ -8,15 +8,15 @@ int main(int argc, char **argv)
     printf("Error: Too few arguments\n");
     exit(1);
   }
-
   // set up threadList and initiate mutex
   threads.size = 0;
   pthread_mutex_init(&thread_mutex, NULL);
+
   // set up socket with configuration
   char configPath[1024] = "./";
   strcat(configPath, argv[1]);
   FILE *getConfig = fopen(configPath, "rb");
-  Config *settings = malloc(sizeof(struct deployment));
+  Config *settings = (struct deployment *)malloc(sizeof(struct deployment));
   if (!getConfig)
   {
     printf("No configuration file found\n");
@@ -129,9 +129,7 @@ void *connection_handler(void *sDescriptor)
   while (1)
   {
     // recieve header
-    // printf("Trying to recieve header\n");
     bytes = recv(data.sd, packet, sizeof(struct message_s), 0);
-    // printf("Successfully recieved header\n");
 
     // nothing being sent from client
     if (bytes == 0)
@@ -149,40 +147,11 @@ void *connection_handler(void *sDescriptor)
     // LIST_REPLY
     if (convertedPacket->type == ((unsigned char)0xA1))
     {
-
-      struct message_s *newPacket = (struct message_s *)malloc(sizeof(struct message_s));
-      DIR *dir;
-      struct dirent *sd;
-
-      // build header packet
-      unsigned char myftp[6] = "myftp";
-      myftp[5] = '\0';
-      memcpy(newPacket->protocol, myftp, 5);
-      newPacket->type = 0xA2;
-      newPacket->length = 6;
-
-      // append file name sizes to newPacket->length
-      if ((dir = opendir("./data")) != NULL)
-        while ((sd = readdir(dir)) != NULL)
-          newPacket->length += strlen(sd->d_name);
-      closedir(dir);
-
-      // convert header packet to network protocol
-      newPacket = htonp(newPacket);
-
-      // printf("Trying to send packet: LIST_REPLY\n");
-
-      // send header packet
-      if ((send(data.sd, newPacket, sizeof(struct message_s), 0)) < 0)
-      {
-        printf("Error sending packets: %s (Errno:%d)\n", strerror(errno), errno);
-        exit(0);
-      }
-
-      // printf("Trying to send packet: LIST_REPLY Payload\n");
-
+      // send LIST_REPLY
       payload *reply = (payload *)malloc(sizeof(payload));
       memset(reply->fileName, '\0', sizeof(reply->fileName));
+      DIR *dir;
+      struct dirent *sd;
 
       // list dir contents
       if ((dir = opendir("./data")) != NULL)
