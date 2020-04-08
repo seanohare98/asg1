@@ -133,3 +133,12 @@ int recFile(int sd, FILE *fp, int fileSize)
   fclose(fp);
   return 0;
 }
+
+// int numStripes(file_size, block_size, k)
+// {
+//   // ceil( file_size / (block_size * k))
+//   // n - k blocks are reserved for parity
+// }
+
+// store metadata for file size, and block numbers
+// metadata number of stripes and blocks

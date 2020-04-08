@@ -1,5 +1,5 @@
 CC = gcc
-LIB = 
+LIB = -lpthread -lisal
 BINCLIENT = client
 BINSERVER = server
 EXECUTABLECLIENT = ${BINCLIENT}/client
@@ -8,8 +8,8 @@ EXECUTABLESERVER = ${BINSERVER}/server
 all:	client server
 
 client:	myftp.c ${BINCLIENT}/myftpclient.c
-	${CC} $^ -o ${EXECUTABLECLIENT} -lpthread ${LIB}
+	${CC} $^ -o ${EXECUTABLECLIENT} ${LIB}
 
 server:	myftp.c ${BINSERVER}/myftpserver.c
-	${CC} $^ -o ${EXECUTABLESERVER} -lpthread ${LIB}
+	${CC} $^ -o ${EXECUTABLESERVER} ${LIB}
 

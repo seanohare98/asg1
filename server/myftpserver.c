@@ -12,9 +12,41 @@ int main(int argc, char **argv)
   // set up threadList and initiate mutex
   threads.size = 0;
   pthread_mutex_init(&thread_mutex, NULL);
+  // set up socket with configuration
+  char configPath[1024] = "./";
+  strcat(configPath, argv[1]);
+  FILE *getConfig = fopen(configPath, "rb");
+  Config *settings = malloc(sizeof(struct deployment));
+  if (!getConfig)
+  {
+    printf("No configuration file found\n");
+    exit(0);
+  }
+  else
+  {
+    char line[256];
+    int lineNum = 0;
+    fscanf(getConfig, "%d", &settings->n);
+    fscanf(getConfig, "%d", &settings->k);
+    fscanf(getConfig, "%d", &settings->server_id);
+    fscanf(getConfig, "%u", &settings->block_size);
+    // printf("%d\t%d\t%d\t%u\n", settings->n, settings->k, settings->server_id, settings->block_size);
+    fseek(getConfig, 0L, SEEK_SET);
+    while (fgets(line, sizeof(line), getConfig))
+    {
+      // printf("lineNum: %d\t", lineNum);
+      // printf("text: %s\n", line);
+      if (lineNum == 4)
+      {
+        strcpy(settings->port, line);
+        // printf("Port: %s\n", settings->port);
+      }
+      lineNum++;
+    }
+    fclose(getConfig);
+  }
 
-  // set up socket with specified ip:port
-  int port = atoi(argv[1]);
+  int port = atoi(settings->port);
   int sd = socket(AF_INET, SOCK_STREAM, 0);
   long val = 1;
   if (setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(long)) == -1)

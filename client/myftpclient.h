@@ -1,4 +1,19 @@
 #include "../myftp.h"
 
-// global variables
-unsigned int message_s_size = sizeof(unsigned char[5]) + sizeof(unsigned char);
+#define MAX_SERVERS 5
+
+struct server
+{
+  char address[13];
+  char port[6];
+  int isActive;
+  int sd;
+};
+
+typedef struct deployment
+{
+  int n;
+  int k;
+  unsigned int block_size;
+  struct server server_list[MAX_SERVERS];
+} Config;
