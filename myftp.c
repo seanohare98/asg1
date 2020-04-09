@@ -131,5 +131,13 @@ uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size)
 
   unsigned char **blocks_data = malloc(sizeof(unsigned char **) * n);
 
-  // ec_encode_data(block_size, k, n-k, stripe->table, frag_ptrs, &frag_ptrs[k]);
+  ec_encode_data(block_size, k, n - k, stripe->table, stripe->data_block, &stripe->parity_block);
+
+  return stripe->encode_matrix;
+}
+
+int readFile(FILE *fp, unsigned char *block, int block_size)
+{
+  int bytes_read = fread(block, sizeof(unsigned char), block_size, fp);
+  return bytes_read;
 }

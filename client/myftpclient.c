@@ -221,30 +221,60 @@ int main(int argc, char **argv)
     int zeroBlocks = floor(emptySize);
     printf("Number of Stripes: %d\t Empty Space: %f\t Zero Blocks: %d\n", numStripes, emptySize, zeroBlocks);
     Stripe *stripeList = malloc(numStripes * sizeof(Stripe));
+
     for (int i = 0; i < numStripes; ++i)
     {
+      int offset = settings->n - settings->k;
       stripeList[i].stripe_id = i;
-      stripeList[i].blocks = malloc(settings->n * settings->block_size);
+      stripeList[i].data_block = malloc(sizeof(unsigned char **));
+      stripeList[i].parity_block = malloc(sizeof(unsigned char **));
+      stripeList[i].blocks = malloc(numStripes * sizeof(unsigned char **));
+      for (int j = 0; j < settings->n; j++)
+      {
+        stripeList[i].blocks[j] = malloc(settings->block_size * sizeof(unsigned char *));
+        printf("%d of blocks = %p\t", j, &stripeList[i].blocks[j]);
+        printf("Usable Size: %ld\n", malloc_usable_size(&stripeList[i].blocks[j]));
+      }
       stripeList[i].data_block = &stripeList[i].blocks[0];
-      stripeList[i].parity_block = &stripeList[i].blocks[settings->k];
-      stripeList[i].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
-      stripeList[i].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+      stripeList[i].parity_block = &stripeList[i].blocks[offset];
+
+      // stripeList[i].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
+      // stripeList[i].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+      //settings->block_size);
 
       for (int j = 0; j < settings->k; j++)
       {
         // stripeList[i].data_block[j] = malloc(settings->block_size);
         printf("%d of data_block = %p\t", j, &stripeList[i].data_block[j]);
-        // printf("%ld fdfs\n", malloc_usable_size(stripeList[i].data_block[j]));
+        printf("Usable Size: %ld\n", malloc_usable_size(&stripeList[i].data_block[j]));
       }
 
       for (int j = 0; j < (settings->n - settings->k); j++)
       {
         // stripeList[i].parity_block[j] = malloc(settings->block_size);
         printf("%d of parity_block = %p\t", j, &stripeList[i].parity_block[j]);
-        // printf("%ld fdfs\n", malloc_usable_size(stripeList[i].parity_block[j]));
+        printf("Usable Size: %ld\n", malloc_usable_size(&stripeList[i].parity_block[j]));
       }
-      encode(settings->n, settings->k, &stripeList[i], settings->block_size);
+
+      printf("HERE");
+
+      // encode(settings->n, settings->k, &stripeList[i], settings->block_size);
     }
+
+    // int remainingBytes = fileSize;
+    // for (int j = 0; j < numStripes; j++)
+    // {
+    //   for (int i = 0; i < settings->k; i++)
+    //   {
+    //     if (remainingBytes > 0)
+    //     {
+    //       printf("HERE");
+    //       int read = readFile(fGET, stripeList[j]->data_block[i], settings->block_size);
+    //       printf("READ %d\n", read);
+    //       remainingBytes -= read;
+    //     }
+    //   }
+    // }
 
     while (1)
     {

@@ -52,3 +52,4 @@ struct message_s *htonp(struct message_s *packet);
 int sendFile(int sd, FILE *fp, int fileSize);
 int recFile(int sd, FILE *FP, int fileSize);
 uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size);
+int readFile(FILE *fp, unsigned char *block, int block_size);
