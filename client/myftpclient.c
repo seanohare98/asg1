@@ -201,6 +201,7 @@ int main(int argc, char **argv)
   // PUT_REQUEST
   if (packet->type == (unsigned char)0xC1)
   {
+
     double fileSize;
     char filePath[1024] = "./";
     strcat(filePath, argv[3]);
@@ -224,27 +225,36 @@ int main(int argc, char **argv)
     for (int i = 0; i < numStripes; ++i)
     {
       stripeList[i].stripe_id = i;
-      stripeList[i].blocks = malloc(settings->n * settings->block_size);
-      stripeList[i].data_block = &stripeList[i].blocks[0];
-      stripeList[i].parity_block = &stripeList[i].blocks[settings->k];
       stripeList[i].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
       stripeList[i].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+      for (int j = 0; j < settings->n; j++)
+      {
+        stripeList[i].blocks[j] = malloc(sizeof(unsigned char) * settings->block_size);
 
+        printf("%d of blocks = %p\t", j, &stripeList[i].blocks[j]);
+        printf("%ld \n", malloc_usable_size(&stripeList[i].blocks[j]));
+      }
+      stripeList[i].data_block = &stripeList[i].blocks[0];
+      stripeList[i].parity_block = &stripeList[i].blocks[settings->k];
       for (int j = 0; j < settings->k; j++)
       {
         // stripeList[i].data_block[j] = malloc(settings->block_size);
         printf("%d of data_block = %p\t", j, &stripeList[i].data_block[j]);
-        // printf("%ld fdfs\n", malloc_usable_size(stripeList[i].data_block[j]));
+        printf("%ld \n", malloc_usable_size(&stripeList[i].data_block[j]));
       }
 
       for (int j = 0; j < (settings->n - settings->k); j++)
       {
         // stripeList[i].parity_block[j] = malloc(settings->block_size);
         printf("%d of parity_block = %p\t", j, &stripeList[i].parity_block[j]);
-        // printf("%ld fdfs\n", malloc_usable_size(stripeList[i].parity_block[j]));
+        printf("%ld \n", malloc_usable_size(&stripeList[i].parity_block[j]));
       }
-      encode(settings->n, settings->k, &stripeList[i], settings->block_size);
+
+      // encode(settings->n, settings->k, &stripeList[i], settings->block_size);
     }
+    char buff[256];
+    int bytes_read = fread(buff, sizeof(unsigned char), settings->block_size, fGET);
+    printf("%d    dfsdfsd", bytes_read);
 
     while (1)
     {
@@ -254,22 +264,15 @@ int main(int argc, char **argv)
         FD_SET(settings->sd[j], &write_fds);
       }
       select(max_sd + 1, NULL, &write_fds, NULL, NULL);
-      for (int k = 0; k < available; k++)
+      for (int k = 0; k < settings->n; k++)
       {
         if (FD_ISSET(settings->sd[k], &write_fds))
         {
-          // for (int i = 0; i < settings->n; i++)
-          // {
-          //   if (settings->server_list[i].status != 0)
-          //   {
-          //   }
-          // }
           exit(0);
         }
       }
     }
   }
-
   return 0;
 }
 
