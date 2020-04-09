@@ -160,7 +160,7 @@ uint8_t *decode_data(int n, int k, Stripe *stripe, size_t block_size, Config* se
                 errors++;
             }
 
-    for(int i = 0 , r = 0 ; i < config->n ; i++ , r++)
+    for(int i = 0 , r = 0 ; i < k ; i++ , r++)
     {
         //search for next available server
         while(frag_error[r])
