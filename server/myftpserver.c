@@ -125,10 +125,10 @@ void *connection_handler(void *sDescriptor)
   struct threadData data = *(struct threadData *)sDescriptor;
   struct message_s *packet = (struct message_s *)malloc(sizeof(struct message_s));
   struct message_s *convertedPacket;
-
+  printf("NEW CLIENT: %d\n", data.sd);
   while (1)
   {
-    // recieve header
+    // recieve request
     bytes = recv(data.sd, packet, sizeof(struct message_s), 0);
 
     // nothing being sent from client
@@ -141,7 +141,7 @@ void *connection_handler(void *sDescriptor)
       break;
     }
 
-    // convert header into host protocol
+    // convert request packet into host protocol
     convertedPacket = ntohp(packet);
 
     // LIST_REPLY
@@ -152,7 +152,7 @@ void *connection_handler(void *sDescriptor)
       memset(reply->fileName, '\0', sizeof(reply->fileName));
       DIR *dir;
       struct dirent *sd;
-      printf("HERE");
+
       // list dir contents
       if ((dir = opendir("./data")) != NULL)
       {

@@ -5,7 +5,8 @@ int main(int argc, char **argv)
   struct message_s *packet = malloc(sizeof(struct message_s));
   fd_set read_fds;
   fd_set write_fds;
-  int max_sd;
+  int available = 0;
+  int max_sd = 0;
 
   // validate arguments
   if (argc < 3)
@@ -70,63 +71,120 @@ int main(int argc, char **argv)
   for (int i = 0; i < settings->n; i++)
   {
     // get address and port
+    int sd = socket(AF_INET, SOCK_STREAM, 0);
     int port = atoi(settings->server_list[i].port);
-    settings->server_list[i].sd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = inet_addr(settings->server_list[i].address);
     server_addr.sin_port = htons(port);
+
     //connect to server
-    settings->server_list[i].status = connect(settings->server_list[i].sd, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    settings->server_list[i].status = connect(sd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if (settings->server_list[i].status < 0)
     {
       printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
+      close(sd);
     }
-    max_sd = max(max_sd, settings->server_list[i].sd);
+    else
+    {
+      // fcntl(sd, F_SETFL, O_NONBLOCK);
+      settings->sd[available] = sd;
+      max_sd = max(max_sd, sd);
+      printf("SD: %d\t", settings->sd[available]);
+      available++;
+    }
+    printf("Address: %s\t", settings->server_list[i].address);
+    printf("Port: %s\t", settings->server_list[i].port);
+    printf("Connection Status: %d\n", settings->server_list[i].status);
   }
-  while (1)
-  {
-    FD_ZERO(&read_fds);
-    FD_ZERO(&write_fds);
-    for (int i = 0; i < settings->n; i++)
-    {
-      FD_SET(settings->server_list[i].sd, &read_fds);
-      FD_SET(settings->server_list[i].sd, &write_fds);
-    }
-    select(max_sd + 1, &read_fds, NULL, NULL, NULL);
-    select(max_sd + 1, NULL, &write_fds, NULL, NULL);
 
-    // LIST_REQUEST
-    if (packet->type == (unsigned char)0xA1)
+  // LIST_REQUEST
+  if (packet->type == (unsigned char)0xA1)
+  {
+    while (1)
     {
-      for (int i = 0; i < settings->n; i++)
+      FD_ZERO(&write_fds);
+      for (int j = 0; j < available; j++)
       {
-        if (FD_ISSET(settings->server_list[i].sd, &write_fds))
+        FD_SET(settings->sd[j], &write_fds);
+      }
+      select(max_sd + 1, NULL, &write_fds, NULL, NULL);
+      for (int k = 0; k < available; k++)
+      {
+        if (FD_ISSET(settings->sd[k], &write_fds))
         {
-          printf("SELECTED:\n");
-          printf("Address: %s\t", settings->server_list[i].address);
-          printf("Port: %s\t", settings->server_list[i].port);
-          printf("Sd: %d\t", settings->server_list[i].sd);
-          printf("Connection Status: %d\n", settings->server_list[i].status);
+          struct message_s *convertedPacket = htonp(packet);
+          payload *list_reply = (payload *)malloc(sizeof(payload));
+          send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
+          recv(settings->sd[k], list_reply, sizeof(payload), 0);
+          while (list_reply->done != 'y')
+          {
+            printf("%s\n", list_reply->fileName);
+            recv(settings->sd[k], list_reply, sizeof(payload), 0);
+          }
+          exit(0);
         }
       }
     }
-    // GET_REQUEST
-    if (packet->type == (unsigned char)0xB1)
-    {
-      printf("GET REQUEST!\n");
-    }
-    // PUT_REQUEST
-    if (packet->type == (unsigned char)0xC1)
-    {
-      printf("PUT REQUEST!\n");
-    }
-    exit(0);
   }
+  // GET_REQUEST
+  if (packet->type == (unsigned char)0xB1)
+  {
+    while (1)
+    {
+      FD_ZERO(&write_fds);
+      for (int j = 0; j < available; j++)
+      {
+        FD_SET(settings->sd[j], &write_fds);
+      }
+      select(max_sd + 1, NULL, &write_fds, NULL, NULL);
+      for (int k = 0; k < available; k++)
+      {
+        if (FD_ISSET(settings->sd[k], &write_fds))
+        {
+          struct message_s *convertedPacket = htonp(packet);
+          payload *list_reply = (payload *)malloc(sizeof(payload));
+          send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
+          recv(settings->sd[k], list_reply, sizeof(payload), 0);
+          while (list_reply->done != 'y')
+          {
+            printf("%s\n", list_reply->fileName);
+            recv(settings->sd[k], list_reply, sizeof(payload), 0);
+          }
+        }
+      }
+    }
+  }
+  // PUT_REQUEST
+  if (packet->type == (unsigned char)0xC1)
+  {
+    printf("PUT REQUEST!\n");
+  }
+
   return 0;
 }
+// printf("TESTING SD %d\n", settings->sd[k]);
 
+// void list(int sd, struct message_s *packet)
+// {
+//   // convert packet to network protocol
+//   struct message_s *convertedPacket;
+//   convertedPacket = htonp(packet);
+//   payload *list_reply = (payload *)malloc(sizeof(payload));
+//   if (send(sd, convertedPacket, sizeof(struct message_s), 0) < 0)
+//   {
+//     printf("Error sending packet(s): %s (Errno:%d)\n", strerror(errno), errno);
+//     exit(0);
+//   }
+//   recv(sd, list_reply, sizeof(payload), 0);
+
+//   while (list_reply->done != 'y')
+//   {
+//     printf("%s\n", list_reply->fileName);
+//     recv(sd, list_reply, sizeof(payload), 0);
+//   }
+// }
 // // GET_REQUEST
 // if (packet->type == (unsigned char)0xB1)
 // {
@@ -286,4 +344,15 @@ int main(int argc, char **argv)
 //   return 0;
 // }
 //   return 0;
+// }
+
+// int result;
+// socklen_t result_len = sizeof(result);
+// if (getsockopt(settings->sd[k], SOL_SOCKET, SO_ERROR, &result, &result_len) != -1)
+// {
+//   printf("SELECTED result: %d:\n", result);
+//   printf("Address: %s\t", settings->server_list[k].address);
+//   printf("Port: %s\t", settings->server_list[k].port);
+//   printf("Sd: %d\t", settings->sd[k]);
+//   printf("Connection Status: %d\n", settings->server_list[k].status);
 // }

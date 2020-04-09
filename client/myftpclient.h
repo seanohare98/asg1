@@ -12,7 +12,7 @@ struct server
   char address[13];
   char port[6];
   int status;
-  int sd;
+  // int sd;
 };
 
 typedef struct deployment
@@ -21,4 +21,5 @@ typedef struct deployment
   int k;
   unsigned int block_size;
   struct server server_list[MAX_SERVERS];
+  int sd[MAX_SERVERS];
 } Config;
