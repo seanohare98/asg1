@@ -198,7 +198,7 @@ int recFile(int sd, FILE *fp, int fileSize)
 //   ec_init_tables(k, errors, stripe->decode_matrix, stripe->table);
 //   ec_encode_data(config->block_size, k, errors, stripe->table, recover_srcs, recover_outp);
 // }
-int readFile(FILE *fp, unsigned char *block, int block_size)
+int readFile(FILE *fp, Stripe *stripeList, int block_size, int fileSize)
 {
   printf("HERE");
   int bytes_read = fread(block, sizeof(unsigned char), block_size, fp);

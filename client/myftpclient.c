@@ -225,28 +225,29 @@ int main(int argc, char **argv)
     for (int i = 0; i < numStripes; ++i)
     {
       stripeList[i].stripe_id = i;
-      stripeList[i].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
-      stripeList[i].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+      // stripeList[i].blocks = malloc(settings->n * sizeof(unsigned char) * settings->block_size);
       for (int j = 0; j < settings->n; j++)
       {
         stripeList[i].blocks[j] = malloc(sizeof(unsigned char) * settings->block_size);
-
-        printf("%d of blocks = %p\t", j, &stripeList[i].blocks[j]);
+        printf("%d %d of blocks = %p\t", i, j, &stripeList[i].blocks[j]);
         printf("%ld \n", malloc_usable_size(&stripeList[i].blocks[j]));
       }
       stripeList[i].data_block = &stripeList[i].blocks[0];
       stripeList[i].parity_block = &stripeList[i].blocks[settings->k];
+      stripeList[i].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
+      stripeList[i].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+
       for (int j = 0; j < settings->k; j++)
       {
         // stripeList[i].data_block[j] = malloc(settings->block_size);
-        printf("%d of data_block = %p\t", j, &stripeList[i].data_block[j]);
+        printf("%d %d of data_block = %p\t", i, j, &stripeList[i].data_block[j]);
         printf("%ld \n", malloc_usable_size(&stripeList[i].data_block[j]));
       }
 
       for (int j = 0; j < (settings->n - settings->k); j++)
       {
         // stripeList[i].parity_block[j] = malloc(settings->block_size);
-        printf("%d of parity_block = %p\t", j, &stripeList[i].parity_block[j]);
+        printf("%d %d of parity_block = %p\t", i, j, &stripeList[i].parity_block[j]);
         printf("%ld \n", malloc_usable_size(&stripeList[i].parity_block[j]));
       }
 
