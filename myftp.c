@@ -119,8 +119,17 @@ int recFile(int sd, FILE *fp, int fileSize)
   return 0;
 }
 
-// int numStripes(file_size, block_size, k)
-// {
-//   // ceil( file_size / (block_size * k))
-//   // n - k blocks are reserved for parity
-// }
+uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size)
+{
+  printf("HERE: %d, %d, %p %ld\n", n, k, stripe, block_size);
+  // uint8_t *encode_matrix = malloc(sizeof(uint8_t) * (n * k));
+  // uint8_t *decode_matrix = malloc(sizeof(uint8_t) * (k * k));
+  // uint8_t *invert_matrix = malloc(sizeof(uint8_t) * (k * k));
+  gf_gen_rs_matrix(stripe->encode_matrix, n, k);
+
+  ec_init_tables(k, n - k, &stripe->encode_matrix[k * k], stripe->table);
+
+  unsigned char **blocks_data = malloc(sizeof(unsigned char **) * n);
+
+  // ec_encode_data(block_size, k, n-k, stripe->table, frag_ptrs, &frag_ptrs[k]);
+}

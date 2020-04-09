@@ -1,5 +1,5 @@
 CC = gcc
-LIB = -lpthread -lisal
+LIB = -lpthread -lisal -lm
 BINCLIENT = client
 BINSERVER = server
 EXECUTABLECLIENT = ${BINCLIENT}/client

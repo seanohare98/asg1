@@ -141,7 +141,7 @@ void *connection_handler(void *sDescriptor)
       break;
     }
 
-    // convert request packet into host protocol
+    // convert header into host protocol
     convertedPacket = ntohp(packet);
 
     // LIST_REPLY
@@ -191,8 +191,6 @@ void *connection_handler(void *sDescriptor)
       struct readFile *get = (struct readFile *)malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
-      // printf("Waiting for payload...\n");
-
       // recieve payload
       recv(data.sd, get, sizeof(struct readFile), 0);
 
@@ -221,8 +219,6 @@ void *connection_handler(void *sDescriptor)
       // convert reply to network protocol
       newPacket->length += strlen(get->fileName);
       newPacket = htonp(newPacket);
-
-      // printf("Trying to send packet: GET_REPLY\n");
 
       // send reply
       if ((send(data.sd, newPacket, sizeof(struct message_s), 0)) < 0)
