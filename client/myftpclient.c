@@ -83,7 +83,7 @@ int main(int argc, char **argv)
     settings->server_list[i].status = connect(sd, (struct sockaddr *)&server_addr, sizeof(server_addr));
     if (settings->server_list[i].status < 0)
     {
-      printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
+      // printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
       close(sd);
     }
     else
@@ -131,82 +131,120 @@ int main(int argc, char **argv)
   // GET_REQUEST
   if (packet->type == (unsigned char)0xB1)
   {
-    while (1)
-    {
-      FD_ZERO(&write_fds);
-      for (int j = 0; j < available; j++)
-      {
-        FD_SET(settings->sd[j], &write_fds);
-      }
-      select(max_sd + 1, NULL, &write_fds, NULL, NULL);
-      for (int k = 0; k < available; k++)
-      {
-        if (FD_ISSET(settings->sd[k], &write_fds))
-        {
-          int fileSize;
-          struct message_s *convertedPacket = htonp(packet);
+    // double fileSize;
+    // char filePath[1024] = "./";
+    // strcat(filePath, argv[3]);
+    // FILE *fGET = fopen(filePath, "rb");
 
-          // send header packet
-          if ((send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0)) < 0)
-          {
-            printf("Error sending packet(s): %s (Errno:%d)\n", strerror(errno), errno);
-            exit(0);
-          }
+    // fseek(fGET, 0L, SEEK_END);
+    // fileSize = ftell(fGET);
+    // fseek(fGET, 0L, SEEK_SET);
+    // printf("FILE %s is %f BYTES\n", , fileSize);
 
-          // build payload
-          struct readFile *get = (struct readFile *)malloc(sizeof(struct readFile));
-          char local[1024] = "./";
-          strcat(local, argv[3]);
-          strcpy(get->fileName, argv[3]);
-          get->done = 'n';
+    // int numStripes = ceil(fileSize / (settings->block_size * settings->k));
+    // double emptySize = (numStripes * settings->k * settings->block_size) - fileSize;
+    // emptySize /= settings->block_size;
+    // int zeroBlocks = floor(emptySize);
+    // printf("Number of Stripes: %d\t Empty Space: %f\t Zero Blocks: %d\n", numStripes, emptySize, zeroBlocks);
+    // Stripe *stripeList = malloc(numStripes * sizeof(Stripe));
+    // for (int idx = 0; idx < numStripes; idx++)
+    // {
+    //   stripeList[idx].stripe_id = idx;
+    //   stripeList[idx].blocks = malloc(settings->n * sizeof(Block));
+    //   for (int b = 0; b < settings->n; b++)
+    //   {
+    //     stripeList[idx].blocks[b].data = malloc(sizeof(unsigned char) * settings->block_size);
+    //     printf("Stripe %d Block %d data = %p\t", idx, b, stripeList[idx].blocks[b].data);
+    //     printf("%ld \n", malloc_usable_size(stripeList[idx].blocks[b].data));
+    //   }
+    //   stripeList[idx].data_block = &stripeList[idx].blocks[0];
+    //   stripeList[idx].parity_block = &stripeList[idx].blocks[settings->k];
+    //   stripeList[idx].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
+    //   stripeList[idx].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+    // }
+    // int didSend[settings->n];
+    // memset(didSend, 0, sizeof(didSend));
+    // int currentStripe = 0;
+    // int sentBlocks = 0;
+    // for (int i = 0; i < numStripes; i++)
+    // {
+    //   encode(settings->n, settings->k, &stripeList[i], settings->block_size);
+    //   for (int j = 0; j < settings->k; j++)
+    //   {
+    //     int bytes_read = fread(stripeList[i].blocks[j].data, sizeof(unsigned char), settings->block_size, fGET);
+    //     printf("Stripe: %d Block: %d has Read: %d bytes\n", i, j, bytes_read);
+    //     // printf("Read DATA: %s\n", stripeList[i].blocks[j].data);
+    //   }
+    // }
 
-          // send payload
-          if ((send(settings->sd[k], get, sizeof(struct readFile), 0)) < 0)
-          {
-            printf("Error sending packet(s): %s (Errno:%d)\n", strerror(errno), errno);
-            exit(0);
-          }
-
-          // receive reply header
-          if ((recv(settings->sd[k], convertedPacket, sizeof(struct message_s), 0)) <= 0)
-          {
-            printf("Error receving packets: %s (Errno:%d)\n", strerror(errno), errno);
-            exit(0);
-          }
-
-          // recieve payload
-          if (convertedPacket->type == 0xB2)
-          {
-            // recieve FILE_DATA header
-            recv(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
-            convertedPacket = ntohp(convertedPacket);
-            fileSize = convertedPacket->length - 6;
-
-            //clear/create file and write to it
-            FILE *fClear, *fWrite;
-            fClear = fopen(local, "wb");
-            fclose(fClear);
-            fWrite = fopen(local, "ab");
-
-            if (recFile(settings->sd[k], fWrite, fileSize) == 0)
-              printf("FILE_DATA protocol recieved\n");
-          }
-          else
-            printf("No such file exists...\n");
-          exit(0);
-        }
-      }
-    }
+    // while (currentStripe < numStripes)
+    // {
+    //   printf("\nCURRENT STRIPE: %d of TOTAL STRIPES: %d\n\n", currentStripe + 1, numStripes);
+    //   FD_ZERO(&write_fds);
+    //   for (int j = 0; j < available; j++)
+    //   {
+    //     // printf("Server Number %d\t with SD %d\t didSend = %d\n", j, settings->sd[j], didSend[j]);
+    //     if (didSend[j] != 1)
+    //     {
+    //       FD_SET(settings->sd[j], &write_fds);
+    //     }
+    //   }
+    //   select(max_sd + 1, NULL, &write_fds, NULL, NULL);
+    //   for (int k = 0; k < settings->n; k++)
+    //   {
+    //     if (FD_ISSET(settings->sd[k], &write_fds))
+    //     {
+    //       if (didSend[k] == 1) //already sent
+    //       {
+    //         printf("Already sent to SD: %d\n", settings->sd[k]);
+    //       }
+    //       else
+    //       {
+    //         struct message_s *convertedPacket = htonp(packet);
+    //         send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
+    //         payload *put = malloc(sizeof(payload));
+    //         strcpy(put->fileName, argv[3]);
+    //         char fileLabel[256];
+    //         strcat(put->fileName, "_");
+    //         sprintf(fileLabel, "%d", currentStripe);
+    //         strcat(put->fileName, fileLabel);
+    //         if (currentStripe == numStripes)
+    //         {
+    //           put->done = 'y';
+    //         }
+    //         else
+    //         {
+    //           put->done = 'n';
+    //         }
+    //         printf("FILE: %s\t", put->fileName);
+    //         send(settings->sd[k], put, sizeof(payload), 0);
+    //         int bytes = send(settings->sd[k], stripeList[currentStripe].blocks[k].data, sizeof(unsigned char) * settings->block_size, 0);
+    //         if (bytes >= 0)
+    //         {
+    //           didSend[k] = 1;
+    //           sentBlocks++;
+    //           printf("SENT: %d bytes\tSERVER_NUMBER: %d \tSERVER_SD: %d\n", bytes, k, settings->sd[k]);
+    //         }
+    //         if (sentBlocks == settings->n)
+    //         {
+    //           currentStripe++;
+    //           sentBlocks = 0;
+    //           memset(didSend, 0, sizeof(didSend));
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
   }
+
   // PUT_REQUEST
   if (packet->type == (unsigned char)0xC1)
   {
-    // if (available < settings->n)
-    // {
-    //   printf("Not enough servers online for action...\n");
-    //   exit(0);
-    // }
-    int didSend[settings->n];
+    if (available < settings->n)
+    {
+      printf("Not enough servers online for action...\n");
+      exit(0);
+    }
     double fileSize;
     char filePath[1024] = "./";
     strcat(filePath, argv[3]);
@@ -241,21 +279,25 @@ int main(int argc, char **argv)
       stripeList[idx].parity_block = &stripeList[idx].blocks[settings->k];
       stripeList[idx].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
       stripeList[idx].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
-      for (int a = 0; a < settings->k; a++)
-      {
-        printf("Stripe %d data_block %d data = %p\t", idx, a, stripeList[idx].data_block[a].data);
-        printf("%ld \n", malloc_usable_size(stripeList[idx].data_block[a].data));
-      }
+      // for (int a = 0; a < settings->k; a++)
+      // {
+      //   printf("Stripe %d data_block %d data = %p\t", idx, a, stripeList[idx].data_block[a].data);
+      //   printf("%ld \n", malloc_usable_size(stripeList[idx].data_block[a].data));
+      // }
 
-      for (int c = 0; c < (settings->n - settings->k); c++)
-      {
-        printf("Stripe %d parity_block %d data = %p\t", idx, c, stripeList[idx].parity_block[c].data);
-        printf("%ld \n", malloc_usable_size(stripeList[idx].parity_block[c].data));
-      }
+      // for (int c = 0; c < (settings->n - settings->k); c++)
+      // {
+      //   printf("Stripe %d parity_block %d data = %p\t", idx, c, stripeList[idx].parity_block[c].data);
+      //   printf("%ld \n", malloc_usable_size(stripeList[idx].parity_block[c].data));
+      // }
     }
-
+    int didSend[settings->n];
+    memset(didSend, 0, sizeof(didSend));
+    int currentStripe = 0;
+    int sentBlocks = 0;
     for (int i = 0; i < numStripes; i++)
     {
+      encode(settings->n, settings->k, &stripeList[i], settings->block_size);
       for (int j = 0; j < settings->k; j++)
       {
         int bytes_read = fread(stripeList[i].blocks[j].data, sizeof(unsigned char), settings->block_size, fGET);
@@ -263,50 +305,77 @@ int main(int argc, char **argv)
         // printf("Read DATA: %s\n", stripeList[i].blocks[j].data);
       }
     }
-    int currentStripe = 0;
-    int currentBlock = 0;
-    while (1)
+
+    while (currentStripe < numStripes)
     {
+      printf("\nCURRENT STRIPE: %d of TOTAL STRIPES: %d\n\n", currentStripe + 1, numStripes);
       FD_ZERO(&write_fds);
       for (int j = 0; j < available; j++)
       {
-        FD_SET(settings->sd[j], &write_fds);
+        // printf("Server Number %d\t with SD %d\t didSend = %d\n", j, settings->sd[j], didSend[j]);
+        if (didSend[j] != 1)
+        {
+          FD_SET(settings->sd[j], &write_fds);
+        }
       }
       select(max_sd + 1, NULL, &write_fds, NULL, NULL);
       for (int k = 0; k < settings->n; k++)
       {
         if (FD_ISSET(settings->sd[k], &write_fds))
         {
-          if (!didSend[k])
+          if (didSend[k] == 1) //already sent
           {
             printf("Already sent to SD: %d\n", settings->sd[k]);
-            continue; //already sent
           }
-          printf("Encode and send to SD: %d\n", settings->sd[k]);
-          uint8_t *matrix =
-              encode(settings->n, settings->k, &stripeList[currentStripe], settings->block_size);
-          for (int c = 0; c < settings->n; c++)
+          else
           {
-            // printf("BLOCK %d: %s\n", c, stripeList[k].blocks[c].data);
+            struct message_s *convertedPacket = htonp(packet);
+            send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
+            payload *put = malloc(sizeof(payload));
+            strcpy(put->fileName, argv[3]);
+            strcpy(put->rawName, argv[3]);
+            char fileLabel[256];
+            strcat(put->fileName, "_");
+            sprintf(fileLabel, "%d", currentStripe + 1);
+            strcat(put->fileName, fileLabel);
+            put->fileSize = (unsigned int)htonl(fileSize);
+            if (currentStripe == numStripes - 1)
+            {
+              put->done = 'y';
+            }
+            else
+            {
+              put->done = 'n';
+            }
+            printf("FILE: %s\t", put->fileName);
+            send(settings->sd[k], put, sizeof(payload), 0);
+            int bytes = send(settings->sd[k], stripeList[currentStripe].blocks[k].data, sizeof(unsigned char) * settings->block_size, 0);
+            if (bytes >= 0)
+            {
+              didSend[k] = 1;
+              sentBlocks++;
+              printf("SENT: %d bytes\tSERVER_NUMBER: %d \tSERVER_SD: %d\n", bytes, k, settings->sd[k]);
+            }
+            if (sentBlocks == settings->n)
+            {
+              currentStripe++;
+              sentBlocks = 0;
+              memset(didSend, 0, sizeof(didSend));
+            }
           }
-          packet->length += strlen(argv[3]);
-          struct message_s *convertedPacket;
-          convertedPacket = htonp(packet);
-          send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
-          payload *put = (payload *)malloc(sizeof(payload));
-          strcpy(put->fileName, argv[3]);
-          put->done = 'n';
-          send(settings->sd[k], put, sizeof(payload), 0);
-          printf("sent payload\n");
-          send(settings->sd[k], stripeList[currentStripe].blocks[currentBlock].data, sizeof(unsigned char) * settings->block_size, 0);
-          exit(0);
         }
       }
     }
+    exit(0);
   }
   return 0;
 }
 
+// for (int c = 0; c < settings->n; c++)
+// {
+//   if (c >= settings->k)
+//     printf("PARITY_BLOCK %d: %s\n", c, stripeList[k].blocks[c].data);
+// }
 // printf("TESTING SD %d\n", settings->sd[k]);
 
 // void list(int sd, struct message_s *packet)

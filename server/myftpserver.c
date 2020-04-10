@@ -189,16 +189,11 @@ void *connection_handler(void *sDescriptor)
       int fileSize;
       char filePath[1024] = "./data/";
       FILE *fGET;
-      struct readFile *get = (struct readFile *)malloc(sizeof(struct readFile));
+      struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
-      // recieve payload
-      recv(data.sd, get, sizeof(struct readFile), 0);
-
-      // printf("Recieved payload\n");
-
       //build reply
-      struct message_s *newPacket = (struct message_s *)malloc(sizeof(struct message_s));
+      struct message_s *newPacket = malloc(sizeof(struct message_s));
       newPacket->length = 6;
 
       //check if file exists
@@ -267,41 +262,55 @@ void *connection_handler(void *sDescriptor)
     // PUT_REPLY
     else if (convertedPacket->type == ((unsigned char)0xC1))
     {
-      int fileSize;
-      char filePath[1024] = "./data/";
-      struct readFile *get = (struct readFile *)malloc(sizeof(struct readFile));
+      char filePath[1024] = "./data";
+      char pathLabel[1024];
+      sprintf(pathLabel, "%d", data.settings->server_id);
+      strcat(filePath, pathLabel);
+      strcat(filePath, "/");
+      struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
-      // recieve payload
+      // recieve payload with fileName
       recv(data.sd, get, sizeof(struct readFile), 0);
-
-      printf("Recieved payload\n");
 
       //clear file and open for writing
       FILE *fClear, *fWrite;
-      strcat(filePath, get->fileName);
-      fClear = fopen(filePath, "wb");
+      char targetFile[1024];
+      strcpy(targetFile, filePath);
+      strcat(targetFile, get->fileName);
+      fClear = fopen(targetFile, "wb");
       fclose(fClear);
-      fWrite = fopen(filePath, "ab");
-      printf("%d", data.settings->block_size);
+      fWrite = fopen(targetFile, "ab");
 
-      // Block *chunk = malloc(sizeof(Block) + sizeof(unsigned char) * data.settings->block_size);
-
-      printf("HERE");
+      // get block
       unsigned char *getBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
-
       recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
 
-      printf("RECIEVEDTHIS%s\n", getBlock);
-
+      // write block data to system
       int bytes_write = fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
-      printf(" Read: %d bytes\n", bytes_write);
-
       fclose(fWrite);
-      pthread_mutex_lock(&thread_mutex);
-      threads.size--;
-      pthread_mutex_unlock(&thread_mutex);
-      break;
+      printf("Wrote: %d bytes to File: %s\n", bytes_write, get->fileName);
+
+      // write metadata and close connection if all stripes recieved
+      if (get->done == 'y')
+      {
+
+        FILE *metaClear, *metaWrite;
+        strcat(filePath, get->rawName);
+        strcat(filePath, "_meta");
+        metaClear = fopen(filePath, "wb");
+        fclose(metaClear);
+        metaWrite = fopen(filePath, "ab");
+        char originalSize[10];
+        sprintf(originalSize, "%d", ntohl(get->fileSize));
+        int bytes_write = fwrite(originalSize, sizeof(unsigned char), sizeof(originalSize), metaWrite);
+        fclose(metaWrite);
+        printf("Wrote: %d bytes (file size = %s) to Path: %s\n", bytes_write, originalSize, filePath);
+        pthread_mutex_lock(&thread_mutex);
+        threads.size--;
+        pthread_mutex_unlock(&thread_mutex);
+        break;
+      }
     }
   }
   return 0;

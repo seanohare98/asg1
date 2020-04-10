@@ -6,7 +6,7 @@ struct message_s *ntohp(struct message_s *packet)
   struct message_s *converted = (struct message_s *)malloc(sizeof(struct message_s));
   memcpy(converted->protocol, packet->protocol, 5);
   converted->type = packet->type;
-  converted->length = (unsigned int)ntohs(packet->length);
+  converted->length = (unsigned int)ntohl(packet->length);
   return converted;
 }
 
@@ -16,7 +16,7 @@ struct message_s *htonp(struct message_s *packet)
   struct message_s *converted = (struct message_s *)malloc(sizeof(struct message_s));
   memcpy(converted->protocol, packet->protocol, 5);
   converted->type = packet->type;
-  converted->length = (unsigned int)htons(packet->length);
+  converted->length = (unsigned int)htonl(packet->length);
   return converted;
 }
 
