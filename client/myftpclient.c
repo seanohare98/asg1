@@ -260,7 +260,7 @@ int main(int argc, char **argv)
       {
         int bytes_read = fread(stripeList[i].blocks[j].data, sizeof(unsigned char), settings->block_size, fGET);
         printf("Stripe: %d Block: %d has Read: %d bytes\n", i, j, bytes_read);
-        printf("Read DATA: %s\n", stripeList[i].blocks[j].data);
+        // printf("Read DATA: %s\n", stripeList[i].blocks[j].data);
       }
     }
     int currentStripe = 0;
@@ -287,7 +287,7 @@ int main(int argc, char **argv)
               encode(settings->n, settings->k, &stripeList[currentStripe], settings->block_size);
           for (int c = 0; c < settings->n; c++)
           {
-            printf("BLOCK %d: %s\n", c, stripeList[k].blocks[c].data);
+            // printf("BLOCK %d: %s\n", c, stripeList[k].blocks[c].data);
           }
           packet->length += strlen(argv[3]);
           struct message_s *convertedPacket;
@@ -297,8 +297,8 @@ int main(int argc, char **argv)
           strcpy(put->fileName, argv[3]);
           put->done = 'n';
           send(settings->sd[k], put, sizeof(payload), 0);
-          unsigned char *blockData = malloc(sizeof(unsigned char *) * settings->block_size);
-          send(settings->sd[k], stripeList[currentStripe].blocks[currentBlock].data, sizeof(blockData), 0);
+          printf("sent payload\n");
+          send(settings->sd[k], stripeList[currentStripe].blocks[currentBlock].data, sizeof(unsigned char) * settings->block_size, 0);
           exit(0);
         }
       }

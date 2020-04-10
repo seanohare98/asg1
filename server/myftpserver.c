@@ -284,10 +284,17 @@ void *connection_handler(void *sDescriptor)
       fclose(fClear);
       fWrite = fopen(filePath, "ab");
       printf("%d", data.settings->block_size);
-      unsigned char *blockData = malloc(sizeof(unsigned char *) * data.settings->block_size);
 
-      int bytes = recv(data.sd, blockData, sizeof(blockData), 0);
-      int bytes_write = fwrite(&blockData, sizeof(unsigned char), data.settings->block_size, fWrite);
+      // Block *chunk = malloc(sizeof(Block) + sizeof(unsigned char) * data.settings->block_size);
+
+      printf("HERE");
+      unsigned char *getBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
+
+      recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+
+      printf("RECIEVEDTHIS%s\n", getBlock);
+
+      int bytes_write = fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
       printf(" Read: %d bytes\n", bytes_write);
 
       fclose(fWrite);
