@@ -98,6 +98,7 @@ int main(int argc, char **argv)
     {
       threads.workers[threads.size].sd = client_sd;
       threads.workers[threads.size].id = threads.size;
+      threads.workers[threads.size].settings = settings;
       if (pthread_create(&threads.workers[threads.size].thread, NULL, connection_handler, (void *)&threads.workers[threads.size]) != 0)
       {
         printf("Failed to make thread\n");
@@ -271,12 +272,10 @@ void *connection_handler(void *sDescriptor)
       struct readFile *get = (struct readFile *)malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
-      // printf("Waiting for payload...\n");
-
       // recieve payload
       recv(data.sd, get, sizeof(struct readFile), 0);
 
-      // printf("Recieved payload\n");
+      printf("Recieved payload\n");
 
       //clear file and open for writing
       FILE *fClear, *fWrite;
@@ -284,38 +283,12 @@ void *connection_handler(void *sDescriptor)
       fClear = fopen(filePath, "wb");
       fclose(fClear);
       fWrite = fopen(filePath, "ab");
+      printf("%d", data.settings->block_size);
+      unsigned char *blockData = malloc(sizeof(unsigned char *) * data.settings->block_size);
 
-      //build reply
-      struct message_s *newPacket = (struct message_s *)malloc(sizeof(struct message_s));
-      unsigned char myftp[6] = "myftp";
-      myftp[5] = '\0';
-      memcpy(newPacket->protocol, myftp, 5);
-      newPacket->type = 0xC2;
-      newPacket->length = 6;
-
-      // convert newPacket to network protocol
-      newPacket = htonp(newPacket);
-
-      // send reply
-      if ((send(data.sd, newPacket, sizeof(struct message_s), 0)) < 0)
-      {
-        printf("Error sending packets: %s (Errno:%d)\n", strerror(errno), errno);
-        exit(0);
-      }
-
-      // printf("Sent packet. Waiting for reply...\n");
-
-      // recieve FILE_DATA header
-      recv(data.sd, newPacket, sizeof(struct message_s), 0);
-      newPacket = ntohp(newPacket);
-      fileSize = newPacket->length - 6;
-
-      // recieve file;
-      if (newPacket->type == ((unsigned char)0xFF))
-      {
-        if (recFile(data.sd, fWrite, fileSize) == 0)
-          printf("FILE_DATA protocol recieved\n");
-      }
+      int bytes = recv(data.sd, blockData, sizeof(blockData), 0);
+      int bytes_write = fwrite(&blockData, sizeof(unsigned char), data.settings->block_size, fWrite);
+      printf(" Read: %d bytes\n", bytes_write);
 
       fclose(fWrite);
       pthread_mutex_lock(&thread_mutex);

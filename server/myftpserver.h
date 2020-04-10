@@ -16,6 +16,7 @@ struct threadData
   pthread_t thread;
   int id;
   int sd;
+  Config *settings;
 };
 
 // array of worker threads

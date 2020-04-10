@@ -119,20 +119,20 @@ int recFile(int sd, FILE *fp, int fileSize)
   return 0;
 }
 
-// uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size)
-// {
-//   printf("HERE: %d, %d, %p %ld\n", n, k, stripe, block_size);
-//   // uint8_t *encode_matrix = malloc(sizeof(uint8_t) * (n * k));
-//   // uint8_t *decode_matrix = malloc(sizeof(uint8_t) * (k * k));
-//   // uint8_t *invert_matrix = malloc(sizeof(uint8_t) * (k * k));
-//   gf_gen_rs_matrix(stripe->encode_matrix, n, k);
+uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size)
+{
+  printf("HERE: %d, %d, %p %ld\n", n, k, stripe, block_size);
+  gf_gen_rs_matrix(stripe->encode_matrix, n, k);
+  ec_init_tables(k, n - k, &stripe->encode_matrix[k * k], stripe->table);
 
-//   ec_init_tables(k, n - k, &stripe->encode_matrix[k * k], stripe->table);
-
-//   unsigned char **blocks_data = malloc(sizeof(unsigned char **) * n);
-
-//   // ec_encode_data(block_size, k, n-k, stripe->table, frag_ptrs, &frag_ptrs[k]);
-// }
+  unsigned char **blocks_data = malloc(sizeof(unsigned char **) * n);
+  for (int i = 0; i < n; i++)
+  {
+    blocks_data[i] = stripe->blocks[i].data;
+  }
+  ec_encode_data(block_size, k, n - k, stripe->table, blocks_data, &blocks_data[k]);
+  return stripe->encode_matrix;
+}
 
 // uint8_t *decode_data(int n, int k, Stripe *stripe, size_t block_size, Config *settings)
 // {
@@ -198,9 +198,3 @@ int recFile(int sd, FILE *fp, int fileSize)
 //   ec_init_tables(k, errors, stripe->decode_matrix, stripe->table);
 //   ec_encode_data(config->block_size, k, errors, stripe->table, recover_srcs, recover_outp);
 // }
-int readFile(FILE *fp, Stripe *stripeList, int block_size, int fileSize)
-{
-  printf("HERE");
-  int bytes_read = fread(block, sizeof(unsigned char), block_size, fp);
-  return bytes_read;
-}

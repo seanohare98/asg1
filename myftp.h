@@ -31,12 +31,17 @@ typedef struct readFile
   char done;
 } payload;
 
+typedef struct block
+{
+  unsigned char *data;
+} Block;
+
 typedef struct stripe
 {
-  int stripe_id;                //stripe id
-  unsigned char **data_block;   // first data_block pointer
-  unsigned char **parity_block; // first parity_block pointer
-  unsigned char **blocks;
+  int stripe_id; //stripe id
+  Block *data_block;
+  Block *parity_block;
+  Block *blocks;
   unsigned char *encode_matrix;
   unsigned char *table;
 } Stripe;
@@ -51,6 +56,9 @@ struct message_s *ntohp(struct message_s *packet);
 struct message_s *htonp(struct message_s *packet);
 int sendFile(int sd, FILE *fp, int fileSize);
 int recFile(int sd, FILE *FP, int fileSize);
+void gf_gen_rs_matrix(unsigned char *matrix, int n, int k);
+void ec_init_tables(int k, int rows, unsigned char *matrix, unsigned char *table);
+void ec_encode_data(int len, int src_len, int dest_len, unsigned char *table, unsigned char **src, unsigned char **dest);
 uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size);
-// uint8_t *decode(int n, int k, Stripe *stripe, size_t block_size, Config* config);
-int readFile(FILE *fp, unsigned char *block, int block_size);
+
+// uint8_t *decode(int n, int k, Stripe *stripe, size_t block_size, Config *config);
