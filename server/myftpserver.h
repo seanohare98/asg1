@@ -1,6 +1,8 @@
 #include "../myftp.h"
+
 #define MAX_CONNECTIONS 10
 
+// deployment configuration (server)
 typedef struct deployment
 {
   int n;
@@ -10,25 +12,23 @@ typedef struct deployment
   char port[6];
 } Config;
 
-// passed as argument to pthread_create()
+// thread metadata
 struct threadData
 {
-  pthread_t thread;
   int id;
   int sd;
+  pthread_t thread;
   Config *settings;
 };
 
-// array of worker threads
+// manage worker threads
 typedef struct group
 {
   struct threadData workers[MAX_CONNECTIONS];
   int size;
 } threadGroup;
 
-// global variable declarations
+// global variables/function declarations
 threadGroup threads;
 pthread_mutex_t thread_mutex;
-
-// function declarations
 void *connection_handler(void *sDescriptor);

@@ -16,28 +16,31 @@
 #include <dirent.h>
 #include <pthread.h>
 
-// header struct
+// protocol structure
 struct message_s
 {
-  unsigned char protocol[5]; //  protocol string (5 bytes)
-  unsigned char type;        //  type (1 byte)
-  unsigned int length;       //  length (header + payload) (4 bytes)
+  unsigned char protocol[5];
+  unsigned char type;
+  unsigned int length;
 } __attribute__((packed));
 
-// payload struct
+// request details
 typedef struct readFile
 {
   char fileName[1024];
   char rawName[1024];
-  int fileSize;
+  long fileSize;
+  int server_no;
   char done;
 } payload;
 
+// block structure
 typedef struct block
 {
   unsigned char *data;
 } Block;
 
+// stripe structure
 typedef struct stripe
 {
   int stripe_id;
@@ -47,17 +50,13 @@ typedef struct stripe
   unsigned char *encode_matrix;
   unsigned char *table;
 } Stripe;
-// blocks, then you have to use ec_encode_data() to recover the missing data blocks.
-// store metadata for file size, and block numbers
-// metadata number of stripes and blocks
 
-// common function declarations
+// function declarations
 struct message_s *ntohp(struct message_s *packet);
 struct message_s *htonp(struct message_s *packet);
-int sendFile(int sd, FILE *fp, int fileSize);
-int recFile(int sd, FILE *FP, int fileSize);
 void gf_gen_rs_matrix(unsigned char *matrix, int n, int k);
+int gf_invert_matrix(unsigned char *in_mat, unsigned char *out_mat, const int k);
 void ec_init_tables(int k, int rows, unsigned char *matrix, unsigned char *table);
 void ec_encode_data(int len, int src_len, int dest_len, unsigned char *table, unsigned char **src, unsigned char **dest);
 uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size);
-// uint8_t *decode(int n, int k, Stripe *stripe, size_t block_size, Config *config);
+// base64 /dev/urandom | head -c 10000000 > file.txt create random text
