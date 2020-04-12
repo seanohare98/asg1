@@ -227,7 +227,7 @@ int main(int argc, char **argv)
       }
 
       // use select
-      select(max_sd + 1, NULL, &write_fds, NULL, NULL);
+      select(max_sd + 1, NULL, &read_fds, NULL, NULL);
 
       // check socket descriptors
       for (int k = 0; k < available; k++)
@@ -299,7 +299,7 @@ int main(int argc, char **argv)
               // check for errors
               if (bytes < 0)
               {
-                printf("Somethings went wrong...\n");
+                printf("Something went wrong...\n");
                 exit(0);
               }
             }
@@ -453,7 +453,8 @@ int main(int argc, char **argv)
       // set fd set
       for (int j = 0; j < available; j++)
       {
-        FD_SET(settings->sd[j], &write_fds);
+        if (didSend[j] != 1)
+          FD_SET(settings->sd[j], &write_fds);
       }
 
       // use select
@@ -495,12 +496,12 @@ int main(int argc, char **argv)
             while (bytes < settings->block_size)
             {
               bytes += send(settings->sd[k], stripeList[currentStripe].blocks[k].data, sizeof(unsigned char) * settings->block_size, 0);
-              // printf("stripe: %d/%d | bytes:%ld | tblock_size: %ld\n", currentStripe + 1, numStripes, bytes, settings->block_size);
+              printf("stripe: %d/%d | bytes:%ld | tblock_size: %ld\n", currentStripe + 1, numStripes, bytes, settings->block_size);
 
               // check for errors
               if (bytes < 0)
               {
-                printf("Somethings went wrong...\n");
+                printf("Something went wrong...\n");
                 exit(0);
               }
             }
