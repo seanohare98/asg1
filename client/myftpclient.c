@@ -218,12 +218,12 @@ int main(int argc, char **argv)
       }
 
       // clear fd set
-      FD_ZERO(&write_fds);
+      FD_ZERO(&read_fds);
 
       // set active connections
       for (int j = 0; j < available; j++)
       {
-        FD_SET(settings->sd[j], &write_fds);
+        FD_SET(settings->sd[j], &read_fds);
       }
 
       // use select
@@ -232,7 +232,7 @@ int main(int argc, char **argv)
       // check socket descriptors
       for (int k = 0; k < available; k++)
       {
-        if (FD_ISSET(settings->sd[k], &write_fds))
+        if (FD_ISSET(settings->sd[k], &read_fds))
         {
           // needFileSize = 1 indicates client should request fileSize
           if (needFileSize == 1)

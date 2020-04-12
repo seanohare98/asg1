@@ -9,7 +9,6 @@ server/server
 client/client
 client/*.txt
 !client/clientconfig.txt
-server/data/*
 server/data1
 server/data2
 server/data3
