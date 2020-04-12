@@ -111,6 +111,13 @@ int main(int argc, char **argv)
   // LIST_PROTOCOL
   if (packet->type == (unsigned char)0xA1)
   {
+    // check server availability
+    if (available < 1)
+    {
+      printf("Not enough servers online for action...\n");
+      exit(0);
+    }
+
     while (1)
     {
       // clear fd set
