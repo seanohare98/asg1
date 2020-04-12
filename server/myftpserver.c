@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     fscanf(getConfig, "%d", &settings->n);
     fscanf(getConfig, "%d", &settings->k);
     fscanf(getConfig, "%d", &settings->server_id);
-    fscanf(getConfig, "%u", &settings->block_size);
+    fscanf(getConfig, "%ld", &settings->block_size);
     fseek(getConfig, 0L, SEEK_SET);
     char line[256];
     int lineNum = 0;
@@ -113,6 +113,7 @@ int main(int argc, char **argv)
       {
         pthread_mutex_lock(&thread_mutex);
         threads.size++;
+        printf("ACTIVE THREADS: %d\t\t", threads.size);
         pthread_mutex_unlock(&thread_mutex);
       }
     }
@@ -123,12 +124,14 @@ int main(int argc, char **argv)
 // worker threads
 void *connection_handler(void *sDescriptor)
 {
-  int bytes;
   struct threadData data = *(struct threadData *)sDescriptor;
   struct message_s *packet = (struct message_s *)malloc(sizeof(struct message_s));
   struct message_s *convertedPacket;
-  printf("NEW CLIENT: %d\n", data.sd);
-  while (1)
+  int bytes, closeSocket = 0;
+
+  printf("CLIENT (%d):\t\t", data.sd);
+
+  while (closeSocket != 1)
   {
     // recieve protocol
     bytes = recv(data.sd, packet, sizeof(struct message_s), 0);
@@ -136,10 +139,7 @@ void *connection_handler(void *sDescriptor)
     // client inactive
     if (bytes == 0)
     {
-      printf("Connection closed\n");
-      pthread_mutex_lock(&thread_mutex);
-      threads.size--;
-      pthread_mutex_unlock(&thread_mutex);
+      closeSocket = 1;
       break;
     }
 
@@ -153,12 +153,13 @@ void *connection_handler(void *sDescriptor)
       memset(reply->fileName, '\0', sizeof(reply->fileName));
       DIR *dir;
       struct dirent *sd;
+
       // list dir contents
-      char dirPath[1024] = "./data";
-      char buff[10];
-      sprintf(buff, "%d", data.settings->server_id);
-      strcat(dirPath, buff);
-      strcat(dirPath, "/");
+      char dirPath[1024] = "./data/";
+      // char buff[10];
+      // sprintf(buff, "%d", data.settings->server_id);
+      // strcat(dirPath, buff);
+      // strcat(dirPath, "/");
       if ((dir = opendir(dirPath)) != NULL)
       {
         // while director isn't empty, send payload with null terminated file name
@@ -166,14 +167,30 @@ void *connection_handler(void *sDescriptor)
         {
           size_t strLength = strlen(sd->d_name);
           size_t metaLength = strlen("_meta");
+
+          // exclude _meta suffix
           if (strncmp(sd->d_name + strLength - metaLength, "_meta", metaLength) == 0)
           {
             strncpy(reply->fileName, sd->d_name, strLength - metaLength);
             reply->done = 'n';
             if (send(data.sd, reply, sizeof(payload), 0) < 0)
             {
-              printf("Error sending packet(s): %s (Errno:%d)\n", strerror(errno), errno);
-              exit(0);
+              printf("Error sending packet(s): %s (Errno:%d)\t\t", strerror(errno), errno);
+              closeSocket = 1;
+              break;
+            }
+          }
+
+          // include . and ..
+          if (strncmp(sd->d_name, ".", strLength) == 0 || strncmp(sd->d_name, "..", strLength) == 0)
+          {
+            strcpy(reply->fileName, sd->d_name);
+            reply->done = 'n';
+            if (send(data.sd, reply, sizeof(payload), 0) < 0)
+            {
+              printf("Error sending packet(s): %s (Errno:%d)\t\t", strerror(errno), errno);
+              closeSocket = 1;
+              break;
             }
           }
         }
@@ -181,25 +198,24 @@ void *connection_handler(void *sDescriptor)
       reply->done = 'y';
       if (send(data.sd, reply, sizeof(payload), 0) < 0)
       {
-        printf("Error sending packet(s): %s (Errno:%d)\n", strerror(errno), errno);
-        exit(0);
+        printf("Error sending packet(s): %s (Errno:%d)\t\t", strerror(errno), errno);
+        closeSocket = 1;
+        break;
       }
       closedir(dir);
-      printf("LIST_PROTOCOL FINISHED\n");
-      pthread_mutex_lock(&thread_mutex);
-      threads.size--;
-      pthread_mutex_unlock(&thread_mutex);
+      closeSocket = 1;
+      printf("LIST_PROTOCOL\t\t");
       break;
     }
 
     // GET_PROTOCOL
     else if (convertedPacket->type == ((unsigned char)0xB1))
     {
-      char filePath[1024] = "./data";
-      char pathLabel[10];
-      sprintf(pathLabel, "%d", data.settings->server_id);
-      strcat(filePath, pathLabel);
-      strcat(filePath, "/");
+      char filePath[1024] = "./data/";
+      // char pathLabel[10];
+      // sprintf(pathLabel, "%d", data.settings->server_id);
+      // strcat(filePath, pathLabel);
+      // strcat(filePath, "/");
       struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
@@ -220,20 +236,36 @@ void *connection_handler(void *sDescriptor)
 
       // read block data from system
       unsigned char *replyBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
-      int bytes_read = fread(replyBlock, sizeof(unsigned char), data.settings->block_size, fRead);
+      if (fread(replyBlock, sizeof(unsigned char), data.settings->block_size, fRead) != data.settings->block_size)
+      {
+        printf("Reading Error\t\t");
+        closeSocket = 1;
+        pthread_mutex_lock(&thread_mutex);
+        threads.size--;
+        pthread_mutex_unlock(&thread_mutex);
+        break;
+      }
       fclose(fRead);
 
       // send block
-      int bytes_sent = send(data.sd, replyBlock, sizeof(unsigned char) * data.settings->block_size, 0);
-      printf("\nRead: %d bytes from File: %s\n", bytes_read, get->fileName);
+      long bytes_sent = 0;
+      while (bytes_sent < data.settings->block_size)
+      {
+        bytes_sent = send(data.sd, replyBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+
+        if (bytes_sent < 0)
+        {
+          printf("Somethings went wrong...\t\t");
+          closeSocket = 1;
+          break;
+        }
+      }
 
       // close connection
       if (get->done == 'y')
       {
-        printf("GET_PROTOCOL FINISHED\n");
-        pthread_mutex_lock(&thread_mutex);
-        threads.size--;
-        pthread_mutex_unlock(&thread_mutex);
+        printf("GET_PROTOCOL\t\t");
+        closeSocket = 1;
         break;
       }
     }
@@ -244,43 +276,48 @@ void *connection_handler(void *sDescriptor)
       struct readFile *getSize = malloc(sizeof(struct readFile));
       memset(getSize->fileName, '\0', sizeof(getSize->fileName));
       recv(data.sd, getSize, sizeof(struct readFile), 0);
-      FILE *metaRead;
-      char filePath[1024] = "./data";
-      char pathLabel[10];
-      sprintf(pathLabel, "%d", data.settings->server_id);
-      strcat(filePath, pathLabel);
-      strcat(filePath, "/");
+      char filePath[1024] = "./data/";
+      // char pathLabel[10];
+      // sprintf(pathLabel, "%d", data.settings->server_id);
+      // strcat(filePath, pathLabel);
+      // strcat(filePath, "/");
       strcat(filePath, getSize->fileName);
       strcat(filePath, "_meta");
-      metaRead = fopen(filePath, "rb");
+      FILE *metaRead = fopen(filePath, "rb");
       struct readFile *replySize = malloc(sizeof(struct readFile));
       if (!metaRead)
       {
         replySize->done = 'y';
+        send(data.sd, replySize, sizeof(struct readFile), 0);
+        printf("File not found error!\t\t");
+        fclose(metaRead);
+        closeSocket = 1;
+        break;
       }
       else
       {
         fscanf(metaRead, "%ld ", &replySize->fileSize);
         replySize->fileSize = htonl(replySize->fileSize);
+        send(data.sd, replySize, sizeof(struct readFile), 0);
+        printf("FILE_SIZE_PROTOCOL\t");
+        fclose(metaRead);
       }
-      send(data.sd, replySize, sizeof(struct readFile), 0);
-      printf("FILE_SIZE_PROTOCOL FINISHED\n");
-      fclose(metaRead);
     }
 
     // PUT_PROTOCOL
     else if (convertedPacket->type == ((unsigned char)0xC1))
     {
-      char filePath[1024] = "./data";
-      char pathLabel[10];
-      sprintf(pathLabel, "%d", data.settings->server_id);
-      strcat(filePath, pathLabel);
-      strcat(filePath, "/");
+      char filePath[1024] = "./data/";
+      // char pathLabel[10];
+      // sprintf(pathLabel, "%d", data.settings->server_id);
+      // strcat(filePath, pathLabel);
+      // strcat(filePath, "/");
       struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
       // receive fileName and fileSize
       recv(data.sd, get, sizeof(struct readFile), 0);
+      long fileSize = ntohl(get->fileSize);
 
       // clear file and open for writing
       FILE *fClear, *fWrite;
@@ -292,15 +329,23 @@ void *connection_handler(void *sDescriptor)
       fWrite = fopen(targetFile, "ab");
 
       // get block
+      int bytes;
+      long bytes_read = 0;
       unsigned char *getBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
-      recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+      while (bytes_read < data.settings->block_size)
+      {
+        bytes = recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
 
-      // write block data to system
-      int bytes_write = fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
+        // check for errors
+        if (bytes < 0)
+        {
+          printf("Somethings went wrong...\t\t");
+          closeSocket = 1;
+          break;
+        }
+        bytes_read += fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
+      }
       fclose(fWrite);
-
-      printf("\nWrote: %d bytes to File: %s\n", bytes_write, get->fileName);
-      printf("\n%.*s\n", 30, getBlock);
 
       // write metadata and close connection
       if (get->done == 'y')
@@ -312,17 +357,19 @@ void *connection_handler(void *sDescriptor)
         fclose(metaClear);
         metaWrite = fopen(filePath, "ab");
         char originalSize[10];
-        sprintf(originalSize, "%d", ntohl(get->fileSize));
-        int bytes_write = fwrite(originalSize, sizeof(unsigned char), sizeof(originalSize), metaWrite);
+        sprintf(originalSize, "%ld", fileSize);
+        int bytes_write = fwrite(originalSize, sizeof(unsigned char), strlen(originalSize), metaWrite);
         fclose(metaWrite);
-        printf("\nWrote: %d bytes (file size = %s) to Path: %s\n", bytes_write, originalSize, filePath);
-        printf("PUT_PROTOCOL FINISHED\n");
-        pthread_mutex_lock(&thread_mutex);
-        threads.size--;
-        pthread_mutex_unlock(&thread_mutex);
+        printf("PUT_PROTOCOL\t\t");
+        printf("METADATA (size = %s)\t", originalSize);
+        closeSocket = 1;
         break;
       }
     }
   }
+  printf("CONNECTION CLOSED\n");
+  pthread_mutex_lock(&thread_mutex);
+  threads.size--;
+  pthread_mutex_unlock(&thread_mutex);
   return 0;
 }

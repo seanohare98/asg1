@@ -59,4 +59,5 @@ int gf_invert_matrix(unsigned char *in_mat, unsigned char *out_mat, const int k)
 void ec_init_tables(int k, int rows, unsigned char *matrix, unsigned char *table);
 void ec_encode_data(int len, int src_len, int dest_len, unsigned char *table, unsigned char **src, unsigned char **dest);
 uint8_t *encode(int n, int k, Stripe *stripe, size_t block_size);
-// base64 /dev/urandom | head -c 10000000 > file.txt create random text
+// generate random file:  base64 /dev/urandom | head -c 10000000 > file.txt
+// view file binary:      xxd -b file

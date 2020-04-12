@@ -8,7 +8,7 @@ typedef struct deployment
   int n;
   int k;
   int server_id;
-  unsigned int block_size;
+  long block_size;
   char port[6];
 } Config;
 

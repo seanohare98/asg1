@@ -46,7 +46,6 @@ int main(int argc, char **argv)
   if (!getConfig)
   {
     printf("No configuration file found\n");
-    fclose(getConfig);
     exit(0);
   }
   // use configuration file
@@ -55,7 +54,7 @@ int main(int argc, char **argv)
     // scan n, k, block_size
     fscanf(getConfig, "%d ", &settings->n);
     fscanf(getConfig, "%d ", &settings->k);
-    fscanf(getConfig, "%d ", &settings->block_size);
+    fscanf(getConfig, "%ld ", &settings->block_size);
     fseek(getConfig, 0L, SEEK_SET);
     char line[256];
     int lineNum = 0;
@@ -78,7 +77,7 @@ int main(int argc, char **argv)
   {
     // create socket
     int sd = socket(AF_INET, SOCK_STREAM, 0);
-    int port = atoi(settings->server_list[i].port);
+    int port = (short)atoi(settings->server_list[i].port);
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
@@ -101,7 +100,7 @@ int main(int argc, char **argv)
       // fcntl(sd, F_SETFL, O_NONBLOCK);
       settings->sd[available] = sd;
       max_sd = max(max_sd, sd);
-      printf("SD: %d\t", settings->sd[available]);
+      // printf("SD: %d\t", settings->sd[available]);
       available++;
     }
     printf("Address: %s\t", settings->server_list[i].address);
@@ -153,7 +152,7 @@ int main(int argc, char **argv)
   if (packet->type == (unsigned char)0xB1)
   {
     // check server availability
-    if (available < (settings->n - settings->k))
+    if (available < settings->k)
     {
       printf("Not enough servers online for action...\n");
       exit(0);
@@ -187,8 +186,6 @@ int main(int argc, char **argv)
     // get stripes
     while (currentStripe < numStripes)
     {
-      printf("\nSTRIPE: %d/%d\n", currentStripe + 1, numStripes);
-
       // needFileSize = 2 indicates stripes need to be built
       if (needFileSize == 2)
       {
@@ -251,7 +248,7 @@ int main(int argc, char **argv)
 
             // receive fileSize
             fileSize = ntohl(sizeData->fileSize);
-            printf("FILESIZE CHECKER: %ld\n", fileSize);
+            printf("Requesting %s (%ld bytes)\n", argv[3], fileSize);
             needFileSize = 2;
             break;
           }
@@ -284,19 +281,23 @@ int main(int argc, char **argv)
             // recieve serverId and block data
             recv(settings->sd[k], get, sizeof(payload), 0);
             int server_no = ntohl(get->server_no) - 1;
+
+            // get block
+            long bytes = 0;
             unsigned char *getBlock = malloc(sizeof(unsigned char) * settings->block_size);
-            int bytes = recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+            while (bytes < settings->block_size)
+            {
+              bytes += recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+
+              // check for errors
+              if (bytes < 0)
+              {
+                printf("Somethings went wrong...\n");
+                exit(0);
+              }
+            }
             gotBlocks++;
             didGet[k] = 1;
-            printf("LOOP CYCLE: %d\tRECIEVED: %d bytes\tSERVER_NUMBER: %d \tSERVER_SD: %d\n", k, bytes, server_no, settings->sd[k]);
-
-            // check for errors
-            if (bytes < 0)
-            {
-              // printf("%s\n", stripeList[currentStripe].blocks[server_no].data);
-              printf("Somethings went wrong...\n");
-              exit(0);
-            }
 
             // move to next stripe
             if (gotBlocks == available)
@@ -333,15 +334,27 @@ int main(int argc, char **argv)
         decode_data(settings->n, settings->k, &stripeList[i], settings->block_size, settings, goodRows, badRows, available);
       }
 
-      // write block by block
-      for (int j = 0; j < settings->k; j++)
+      // write blocks (exclude zero blocks)
+      for (int j = 0; j < (settings->k - zeroBlocks); j++)
       {
-        printf("\nStripe %d Block %d\n\n%.*s\n", i, j, 50, stripeList[i].blocks[j].data);
-        int bytes_saved = fwrite(stripeList[i].blocks[j].data, sizeof(unsigned char), settings->block_size, writeFile);
-        printf("\nSave %d bytes\n", bytes_saved);
+        // last block case
+        if ((i == numStripes - 1) && (j == settings->k - zeroBlocks - 1))
+        {
+          // calculate size
+          double lastBlockEmpty = (long)(emptySize * settings->block_size) - (zeroBlocks * settings->block_size);
+          long lastBlockSize = settings->block_size - (long)lastBlockEmpty;
+
+          // write remaining
+          fwrite(stripeList[i].blocks[j].data, sizeof(unsigned char), lastBlockSize, writeFile);
+          fclose(writeFile);
+        }
+        // write whole block
+        else
+        {
+          fwrite(stripeList[i].blocks[j].data, sizeof(unsigned char), settings->block_size, writeFile);
+        }
       }
     }
-    fclose(writeFile);
     exit(0);
   }
 
@@ -369,13 +382,13 @@ int main(int argc, char **argv)
       exit(0);
     }
     // get fileSize
-    fseek(fGET, 0, SEEK_END);
+    fseek(fGET, 0L, SEEK_END);
     fileSize = ftell(fGET);
     fseek(fGET, 0L, SEEK_SET);
-    printf("%s is %ld bytes!\n", filePath, fileSize);
+    printf("Sending %s (%ld bytes)\n", argv[3], fileSize);
 
     // chunking calculations
-    int numStripes = ceil(fileSize / (settings->block_size * settings->k));
+    int numStripes = ceil((double)fileSize / (settings->block_size * settings->k));
     double emptySize = (numStripes * settings->k * settings->block_size) - fileSize;
     emptySize /= settings->block_size;
     int zeroBlocks = floor(emptySize);
@@ -411,7 +424,6 @@ int main(int argc, char **argv)
     }
 
     // encode file data into stripes
-    int currentStripe = 0, sentBlocks = 0;
     for (int i = 0; i < numStripes; i++)
     {
       for (int j = 0; j < settings->k; j++)
@@ -424,12 +436,10 @@ int main(int argc, char **argv)
     fclose(fGET);
 
     // send stripes
-    int didSend[settings->n];
+    int currentStripe = 0, sentBlocks = 0, didSend[settings->n];
     memset(didSend, 0, sizeof(didSend));
     while (currentStripe < numStripes)
     {
-      printf("\nSTRIPE: %d/%d\n", currentStripe + 1, numStripes);
-
       // clear fd set
       FD_ZERO(&write_fds);
 
@@ -474,13 +484,21 @@ int main(int argc, char **argv)
             send(settings->sd[k], put, sizeof(payload), 0);
 
             // send block
-            int bytes = send(settings->sd[k], stripeList[currentStripe].blocks[k].data, sizeof(unsigned char) * settings->block_size, 0);
-            if (bytes >= 0)
+            long bytes = 0;
+            while (bytes < settings->block_size)
             {
-              didSend[k] = 1;
-              sentBlocks++;
-              printf("FILE: %s\tSERVER_NUMBER: %d\tSERVER_SD: %d\n", put->fileName, k, settings->sd[k]);
+              bytes += send(settings->sd[k], stripeList[currentStripe].blocks[k].data, sizeof(unsigned char) * settings->block_size, 0);
+              // printf("stripe: %d/%d | bytes:%ld | tblock_size: %ld\n", currentStripe + 1, numStripes, bytes, settings->block_size);
+
+              // check for errors
+              if (bytes < 0)
+              {
+                printf("Somethings went wrong...\n");
+                exit(0);
+              }
             }
+            didSend[k] = 1;
+            sentBlocks++;
 
             // move to next stripe
             if (sentBlocks == settings->n)

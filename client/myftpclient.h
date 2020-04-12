@@ -23,7 +23,7 @@ typedef struct deployment
 {
   int n;
   int k;
-  int block_size;
+  long block_size;
   struct server server_list[MAX_SERVERS];
   int sd[MAX_SERVERS];
 } Config;
