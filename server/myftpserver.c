@@ -155,11 +155,11 @@ void *connection_handler(void *sDescriptor)
       struct dirent *sd;
 
       // list dir contents
-      char dirPath[1024] = "./data/";
-      // char buff[10];
-      // sprintf(buff, "%d", data.settings->server_id);
-      // strcat(dirPath, buff);
-      // strcat(dirPath, "/");
+      char dirPath[1024] = "./data";
+      char buff[10];
+      sprintf(buff, "%d", data.settings->server_id);
+      strcat(dirPath, buff);
+      strcat(dirPath, "/");
       if ((dir = opendir(dirPath)) != NULL)
       {
         // while director isn't empty, send payload with null terminated file name
@@ -211,11 +211,11 @@ void *connection_handler(void *sDescriptor)
     // GET_PROTOCOL
     else if (convertedPacket->type == ((unsigned char)0xB1))
     {
-      char filePath[1024] = "./data/";
-      // char pathLabel[10];
-      // sprintf(pathLabel, "%d", data.settings->server_id);
-      // strcat(filePath, pathLabel);
-      // strcat(filePath, "/");
+      char filePath[1024] = "./data";
+      char pathLabel[10];
+      sprintf(pathLabel, "%d", data.settings->server_id);
+      strcat(filePath, pathLabel);
+      strcat(filePath, "/");
       struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
@@ -247,11 +247,11 @@ void *connection_handler(void *sDescriptor)
       }
 
       fclose(fRead);
-      printf("Text: \n%.*s\n", 500, replyBlock);
 
       // send block
       long bytes_sent = 0;
       send(data.sd, replyBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+      printf("File: %s \t Text: \t%.*s\n", targetFile, 10, replyBlock);
 
       // while (bytes_sent < data.settings->block_size)
       // {
@@ -281,11 +281,11 @@ void *connection_handler(void *sDescriptor)
       struct readFile *getSize = malloc(sizeof(struct readFile));
       memset(getSize->fileName, '\0', sizeof(getSize->fileName));
       recv(data.sd, getSize, sizeof(struct readFile), 0);
-      char filePath[1024] = "./data/";
-      // char pathLabel[10];
-      // sprintf(pathLabel, "%d", data.settings->server_id);
-      // strcat(filePath, pathLabel);
-      // strcat(filePath, "/");
+      char filePath[1024] = "./data";
+      char pathLabel[10];
+      sprintf(pathLabel, "%d", data.settings->server_id);
+      strcat(filePath, pathLabel);
+      strcat(filePath, "/");
       strcat(filePath, getSize->fileName);
       strcat(filePath, "_meta");
       FILE *metaRead = fopen(filePath, "rb");
@@ -318,11 +318,11 @@ void *connection_handler(void *sDescriptor)
       sendServerNo->server_no = htons(data.settings->server_id);
       send(data.sd, sendServerNo, sizeof(struct readFile), 0);
 
-      char filePath[1024] = "./data/";
-      // char pathLabel[10];
-      // sprintf(pathLabel, "%d", data.settings->server_id);
-      // strcat(filePath, pathLabel);
-      // strcat(filePath, "/");
+      char filePath[1024] = "./data";
+      char pathLabel[10];
+      sprintf(pathLabel, "%d", data.settings->server_id);
+      strcat(filePath, pathLabel);
+      strcat(filePath, "/");
       struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
 
@@ -345,6 +345,7 @@ void *connection_handler(void *sDescriptor)
       unsigned char *getBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
       recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
       fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
+      printf("File: %s\tText: \t%.*s\n", targetFile, 10, getBlock);
 
       // while (bytes_read < data.settings->block_size)
       // {

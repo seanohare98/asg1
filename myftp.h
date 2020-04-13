@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <malloc.h>
 #include <stdbool.h>
 #include <fcntl.h>
 #include <unistd.h>

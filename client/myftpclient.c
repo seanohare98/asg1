@@ -168,7 +168,7 @@ int main(int argc, char **argv)
     // state management variables
     double emptySize;
     long fileSize;
-    int zeroBlocks, currentStripe = 0, gotBlocks = 0, workNodes = 0, errNodes = 0, serverId = 0, needFileSize = 1, numStripes = 1, failed = (settings->n - available), didGet[available];
+    int zeroBlocks, currentStripe = 0, gotBlocks = 0, workNodes = 0, errNodes = 0, serverId = 0, needFileSize = 1, numStripes = 2, failed = (settings->n - available), didGet[available];
     memset(didGet, 0, sizeof(didGet));
     int *goodRows = malloc(sizeof(int) * available);
     int *badRows = malloc(sizeof(int) * failed);
@@ -208,12 +208,27 @@ int main(int argc, char **argv)
           for (int b = 0; b < settings->n; b++)
           {
             stripeList[idx].blocks[b].data = malloc(sizeof(unsigned char) * settings->block_size);
+            printf("Stripe %d Block %d data = %p\t", idx, b, stripeList[idx].blocks[b].data);
+            printf("%ld \n", malloc_usable_size(stripeList[idx].blocks[b].data));
           }
           stripeList[idx].data_block = &stripeList[idx].blocks[0];
           stripeList[idx].parity_block = &stripeList[idx].blocks[settings->k];
           stripeList[idx].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
           stripeList[idx].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+          for (int a = 0; a < settings->k; a++)
+          {
+            printf("Stripe %d data_block %d data = %p\t", idx, a, stripeList[idx].data_block[a].data);
+            printf("%ld \n", malloc_usable_size(stripeList[idx].data_block[a].data));
+          }
+
+          for (int c = 0; c < (settings->n - settings->k); c++)
+          {
+            printf("Stripe %d parity_block %d data = %p\t", idx, c, stripeList[idx].parity_block[c].data);
+            printf("%ld \n", malloc_usable_size(stripeList[idx].parity_block[c].data));
+          }
         }
+        printf("Number of Stripes: %d\t Empty Space: %f\t Zero Blocks: %d\n", numStripes, emptySize, zeroBlocks);
+
         needFileSize = 0;
       }
 
@@ -283,7 +298,9 @@ int main(int argc, char **argv)
             sprintf(fileLabel, "%d", currentStripe + 1);
             strcat(get->fileName, fileLabel);
             if (currentStripe == numStripes - 1)
+            {
               get->done = 'y';
+            }
             else
               get->done = 'n';
             send(settings->sd[k], get, sizeof(payload), 0);
@@ -309,8 +326,8 @@ int main(int argc, char **argv)
             // }
             // memcpy(stripeList[currentStripe].blocks[server_no].data, getBlock, settings->block_size);
 
-            printf("\n\nSuccess\t Stripe %d of %d\t Server: %d\t Recieved %ld Bytes...\n\n", currentStripe, numStripes, server_no, bytes);
-            printf("Text: \n%.*s\n", 100, getBlock);
+            printf("Stripe %d of %d\t Server: %d\t Recieved %ld Bytes\t", currentStripe + 1, numStripes, server_no, bytes);
+            printf("Text: \t%.*s\n", 10, stripeList[currentStripe].blocks[server_no].data);
 
             gotBlocks++;
             didGet[k] = 1;
@@ -328,11 +345,8 @@ int main(int argc, char **argv)
     }
 
     // clear file and open for writing
-    FILE *clearFile = fopen(argv[3], "wb");
-    fclose(clearFile);
-    FILE *writeFile = fopen(argv[3], "ab");
+    FILE *writeFile = fopen("herewego.txt", "ab");
     int needsDecode = 0;
-
     // check for failed blocks
     for (int idx = 0; idx < settings->k; idx++)
     {
@@ -343,7 +357,6 @@ int main(int argc, char **argv)
     // write stripes to file
     for (int i = 0; i < numStripes; i++)
     {
-
       // decode failed stripes
       if (needsDecode)
       {
@@ -418,15 +431,28 @@ int main(int argc, char **argv)
       for (int b = 0; b < settings->n; b++)
       {
         stripeList[idx].blocks[b].data = malloc(sizeof(unsigned char) * settings->block_size);
+        printf("Stripe %d Block %d data = %p\t", idx, b, stripeList[idx].blocks[b].data);
+        printf("%ld \n", malloc_usable_size(stripeList[idx].blocks[b].data));
       }
       stripeList[idx].data_block = &stripeList[idx].blocks[0];
       stripeList[idx].parity_block = &stripeList[idx].blocks[settings->k];
       stripeList[idx].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
       stripeList[idx].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
+      for (int a = 0; a < settings->k; a++)
+      {
+        printf("Stripe %d data_block %d data = %p\t", idx, a, stripeList[idx].data_block[a].data);
+        printf("%ld \n", malloc_usable_size(stripeList[idx].data_block[a].data));
+      }
+
+      for (int c = 0; c < (settings->n - settings->k); c++)
+      {
+        printf("Stripe %d parity_block %d data = %p\t", idx, c, stripeList[idx].parity_block[c].data);
+        printf("%ld \n", malloc_usable_size(stripeList[idx].parity_block[c].data));
+      }
     }
 
     // encode file data into stripes
-    for (int i = 0; i < (numStripes - zeroBlocks); i++)
+    for (int i = 0; i < numStripes; i++)
     {
       for (int j = 0; j < settings->k; j++)
       {
@@ -493,7 +519,11 @@ int main(int argc, char **argv)
             send(settings->sd[k], put, sizeof(payload), 0);
 
             // send block
-            send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+            int bytes;
+            bytes = send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+            printf("Bytes: %d\t Stripe: %d\tServer: %d\n", bytes, currentStripe, server_no);
+            printf("Text: \n%.*s\n", 10, stripeList[currentStripe].blocks[server_no].data);
+
             // long bytes = 0;
             // while (bytes < settings->block_size)
             // {
