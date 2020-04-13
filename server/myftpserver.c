@@ -253,8 +253,9 @@ void *connection_handler(void *sDescriptor)
       {
         bytes_sent = send(data.sd, replyBlock, sizeof(unsigned char) * data.settings->block_size, 0);
 
-        if (bytes_sent < 0)
+        if (bytes_sent < 0 || bytes_sent < data.settings->block_size)
         {
+          printf("ERRORRRR: %d", bytes_sent);
           printf("Somethings went wrong...\t\t");
           closeSocket = 1;
           break;
@@ -307,6 +308,12 @@ void *connection_handler(void *sDescriptor)
     // PUT_PROTOCOL
     else if (convertedPacket->type == ((unsigned char)0xC1))
     {
+
+      // send server ID
+      struct readFile *sendServerNo = malloc(sizeof(struct readFile));
+      sendServerNo->server_no = htons(data.settings->server_id);
+      send(data.sd, sendServerNo, sizeof(struct readFile), 0);
+
       char filePath[1024] = "./data/";
       // char pathLabel[10];
       // sprintf(pathLabel, "%d", data.settings->server_id);
@@ -340,6 +347,7 @@ void *connection_handler(void *sDescriptor)
         if (bytes < 0)
         {
           printf("Somethings went wrong...\t\t");
+          printf("BYTES: %d\n", bytes);
           closeSocket = 1;
           break;
         }

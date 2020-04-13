@@ -7,7 +7,6 @@ myftpclient
 myftpserver
 server/server
 client/client
-client/*.txt
 !client/clientconfig.txt
 server/data1
 server/data2

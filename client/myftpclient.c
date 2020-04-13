@@ -298,16 +298,17 @@ int main(int argc, char **argv)
             unsigned char *getBlock = malloc(sizeof(unsigned char) * settings->block_size);
             while (bytes < settings->block_size)
             {
-              bytes += recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
-
+              bytes += recv(settings->sd[k], getBlock, sizeof(unsigned char) * settings->block_size, 0);
               // check for errors
               if (bytes < 0 || bytes < settings->block_size)
               {
                 printf("Something went wrong...\n");
-                printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
+                printf("ERRORRR: %d", bytes);
                 exit(0);
               }
             }
+            memcpy(stripeList[currentStripe].blocks[server_no].data, getBlock, settings->block_size);
+
             gotBlocks++;
             didGet[k] = 1;
 
@@ -467,6 +468,13 @@ int main(int argc, char **argv)
             struct message_s *convertedPacket = htonp(packet);
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
 
+            // receive server
+            payload *serv = malloc(sizeof(payload));
+            recv(settings->sd[k], serv, sizeof(payload), 0);
+            int server_no;
+            server_no = ntohs(serv->server_no) - 1;
+            printf("SERVER: %d\t", server_no);
+
             // send fileName and fileSize
             payload *put = malloc(sizeof(payload));
             strcpy(put->fileName, argv[3]);
@@ -486,13 +494,14 @@ int main(int argc, char **argv)
             long bytes = 0;
             while (bytes < settings->block_size)
             {
-              bytes += send(settings->sd[k], stripeList[currentStripe].blocks[k].data, sizeof(unsigned char) * settings->block_size, 0);
+              bytes += send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
 
               // check for errors
               if (bytes < 0)
               {
                 printf("Something went wrong...\n");
                 printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
+                printf("BYTES: %d\n", bytes);
                 exit(0);
               }
             }
