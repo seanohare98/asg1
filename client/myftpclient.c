@@ -219,25 +219,26 @@ int main(int argc, char **argv)
       }
 
       // clear fd set
-      FD_ZERO(&read_fds);
-
+      FD_ZERO(&write_fds);
+      int set = 0;
       // set active connections
       for (int j = 0; j < available; j++)
       {
-        printf("STRIPE :%d/%d ...ISSET %d = sdL %d", currentStripe, numStripes, j, settings->sd[j]);
+        printf("didGet[%d] == %d\n", j, settings->sd[j]);
         if (didGet[j] != 1)
         {
-          FD_SET(settings->sd[j], &read_fds);
+          FD_SET(settings->sd[j], &write_fds);
+          set++;
         }
       }
 
       // use select
-      select(max_sd + 1, NULL, &read_fds, NULL, NULL);
+      select(max_sd + 1, NULL, &write_fds, NULL, NULL);
 
       // check socket descriptors
-      for (int k = 0; k < available; k++)
+      for (int k = 0; k < set; k++)
       {
-        if (FD_ISSET(settings->sd[k], &read_fds))
+        if (FD_ISSET(settings->sd[k], &write_fds))
         {
           // needFileSize = 1 indicates client should request fileSize
           if (needFileSize == 1)
@@ -276,7 +277,7 @@ int main(int argc, char **argv)
             packet->type = (unsigned char)0xB1;
             struct message_s *convertedPacket = htonp(packet);
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
-            printf("READ ISSEET loop: %d, sd: %d", k, settings->sd[k]);
+            printf("loop: %d\n", k, settings->sd[k]);
             // format = name_stripe
             payload *get = malloc(sizeof(payload));
             char fileLabel[10];
@@ -300,7 +301,7 @@ int main(int argc, char **argv)
             while (bytes < settings->block_size)
             {
               bytes += recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
-              printf("GETTING BYTES OF STRIPE %d, Server: %d, bytes: %ld get->done: %c\n", currentStripe, server_no, bytes, get->done);
+              printf("STRIPE %d of %d, Server: %d, bytes: %ld get->done: %c\n", currentStripe, numStripes, server_no, bytes, get->done);
               // check for errors
               if (bytes < 0)
               {
@@ -314,7 +315,6 @@ int main(int argc, char **argv)
             // move to next stripe
             if (gotBlocks == available)
             {
-              printf("INCREMENT STRIPE\n");
               currentStripe++;
               gotBlocks = 0;
               memset(didGet, 0, sizeof(didGet));
@@ -455,19 +455,23 @@ int main(int argc, char **argv)
     {
       // clear fd set
       FD_ZERO(&write_fds);
-
+      int set;
       // set fd set
       for (int j = 0; j < available; j++)
       {
+        printf("j=%d\t didSend[j]= %d \n", j, didSend[j]);
         if (didSend[j] != 1)
+        {
           FD_SET(settings->sd[j], &write_fds);
+          set++;
+        }
       }
 
       // use select
       select(max_sd + 1, NULL, &write_fds, NULL, NULL);
 
       // check descriptors
-      for (int k = 0; k < settings->n; k++)
+      for (int k = 0; k < set; k++)
       {
         if (FD_ISSET(settings->sd[k], &write_fds))
         {
@@ -478,6 +482,7 @@ int main(int argc, char **argv)
           }
           else
           {
+            printf("loop: %d \n", k);
             // send request
             struct message_s *convertedPacket = htonp(packet);
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
@@ -507,7 +512,7 @@ int main(int argc, char **argv)
             while (bytes < settings->block_size)
             {
               bytes += send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
-              printf("stripe: %d/%d | bytes:%ld | server: %d\n", currentStripe + 1, numStripes, bytes, server_no);
+              printf("stripe: %d of %d | bytes:%ld | server_no: %d\n", currentStripe + 1, numStripes, bytes, server_no);
 
               // check for errors
               if (bytes < 0)
