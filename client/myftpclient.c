@@ -196,7 +196,7 @@ int main(int argc, char **argv)
       // needFileSize = 2 indicates stripes need to be built
       if (needFileSize == 2)
       {
-        printf("BUILDING.");
+        printf("BUILDING.\n");
         numStripes = ceil((double)fileSize / (settings->block_size * settings->k));
         emptySize = (numStripes * settings->k * settings->block_size) - fileSize;
         emptySize /= settings->block_size;
@@ -277,7 +277,7 @@ int main(int argc, char **argv)
             packet->type = (unsigned char)0xB1;
             struct message_s *convertedPacket = htonp(packet);
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
-            printf("loop: %d\n", k);
+            printf("loop: %d\t", k);
 
             // format = name_stripe
             payload *get = malloc(sizeof(payload));
@@ -287,14 +287,19 @@ int main(int argc, char **argv)
             sprintf(fileLabel, "%d", currentStripe + 1);
             strcat(get->fileName, fileLabel);
             if (currentStripe == numStripes - 1)
+            {
               get->done = 'y';
+              printf("get->done (%c)\t", get->done);
+            }
             else
               get->done = 'n';
+
             send(settings->sd[k], get, sizeof(payload), 0);
-            printf("get->done (%c)\t", get->done);
+
             // recieve serverId and block data
-            recv(settings->sd[k], get, sizeof(payload), 0);
-            int server_no = ntohl(get->server_no) - 1;
+            payload *serverData = malloc(sizeof(payload));
+            recv(settings->sd[k], serverData, sizeof(payload), 0);
+            int server_no = ntohs(serverData->server_no) - 1;
 
             // get block
             long bytes = recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
