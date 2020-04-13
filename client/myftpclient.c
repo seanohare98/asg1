@@ -223,7 +223,10 @@ int main(int argc, char **argv)
       // set active connections
       for (int j = 0; j < available; j++)
       {
-        FD_SET(settings->sd[j], &read_fds);
+        if (didGet[j] != 1)
+        {
+          FD_SET(settings->sd[j], &read_fds);
+        }
       }
 
       // use select
