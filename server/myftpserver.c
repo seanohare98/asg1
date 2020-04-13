@@ -367,4 +367,4 @@ void *connection_handler(void *sDescriptor)
   threads.size--;
   pthread_mutex_unlock(&thread_mutex);
   return 0;
-};
+}
