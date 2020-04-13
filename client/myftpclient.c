@@ -483,7 +483,7 @@ int main(int argc, char **argv)
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
 
             // recieve server_no
-            struct message_s *serverData = malloc(sizeof(struct message_s));
+            payload *serverData = malloc(sizeof(payload));
             recv(settings->sd[k], serverData, sizeof(payload), 0);
             int server_no = ntohl(serverData->server_no) - 1;
 
