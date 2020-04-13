@@ -291,25 +291,21 @@ int main(int argc, char **argv)
             else
               get->done = 'n';
             send(settings->sd[k], get, sizeof(payload), 0);
-
+            printf("get->done (%c)\t", get->done);
             // recieve serverId and block data
             recv(settings->sd[k], get, sizeof(payload), 0);
             int server_no = ntohl(get->server_no) - 1;
 
             // get block
-            long bytes = 0;
-            unsigned char *getBlock = malloc(sizeof(unsigned char) * settings->block_size);
-            while (bytes < settings->block_size)
+            long bytes = recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+            printf("STRIPE %d of %d, Server: %d, bytes: %ld\n", currentStripe, numStripes, server_no, bytes);
+            // check for errors
+            if (bytes < 0)
             {
-              bytes += recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
-              printf("STRIPE %d of %d, Server: %d, bytes: %ld get->done: %c\n", currentStripe, numStripes, server_no, bytes, get->done);
-              // check for errors
-              if (bytes < 0)
-              {
-                printf("Something went wrong...\n");
-                exit(0);
-              }
+              printf("Something went wrong...\n");
+              exit(0);
             }
+
             gotBlocks++;
             didGet[k] = 1;
 
@@ -345,6 +341,7 @@ int main(int argc, char **argv)
       // decode failed stripes
       if (needsDecode)
       {
+        printf("NEEDS DECODE\n");
         decode_data(settings->n, settings->k, &stripeList[i], settings->block_size, settings, goodRows, badRows, available);
       }
 
@@ -509,19 +506,16 @@ int main(int argc, char **argv)
             send(settings->sd[k], put, sizeof(payload), 0);
 
             // send block
-            long bytes = 0;
-            while (bytes < settings->block_size)
-            {
-              bytes += send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
-              printf("stripe: %d of %d | bytes:%ld | server_no: %d\n", currentStripe + 1, numStripes, bytes, server_no);
+            long bytes = send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+            printf("stripe: %d of %d | bytes:%ld | server_no: %d\n", currentStripe + 1, numStripes, bytes, server_no);
 
-              // check for errors
-              if (bytes < 0)
-              {
-                printf("Something went wrong...\n");
-                exit(0);
-              }
+            // check for errors
+            if (bytes < 0)
+            {
+              printf("Something went wrong...\n");
+              exit(0);
             }
+
             didSend[k] = 1;
             sentBlocks++;
 
@@ -604,4 +598,5 @@ uint8_t *decode_data(int n, int k, Stripe *stripe, size_t block_size, Config *se
 
   // decode missing blocks
   ec_encode_data(block_size, k, numFailed, stripe->table, srcBlocks, destBlocks);
+  return stripe->table;
 }
