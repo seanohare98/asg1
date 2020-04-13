@@ -196,8 +196,8 @@ int main(int argc, char **argv)
       // needFileSize = 2 indicates stripes need to be built
       if (needFileSize == 2)
       {
-        printf("BUILDING.")
-            numStripes = ceil((double)fileSize / (settings->block_size * settings->k));
+        printf("BUILDING.");
+        numStripes = ceil((double)fileSize / (settings->block_size * settings->k));
         emptySize = (numStripes * settings->k * settings->block_size) - fileSize;
         emptySize /= settings->block_size;
         zeroBlocks = floor(emptySize);
@@ -483,7 +483,7 @@ int main(int argc, char **argv)
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
 
             // recieve server_no
-            payload serverData = malloc(sizeof(payload));
+            struct message_s *serverData = malloc(sizeof(struct message_s));
             recv(settings->sd[k], serverData, sizeof(payload), 0);
             int server_no = ntohl(serverData->server_no) - 1;
 
