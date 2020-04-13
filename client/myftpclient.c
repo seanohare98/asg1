@@ -277,7 +277,8 @@ int main(int argc, char **argv)
             packet->type = (unsigned char)0xB1;
             struct message_s *convertedPacket = htonp(packet);
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
-            printf("loop: %d\n", k, settings->sd[k]);
+            printf("loop: %d\n", k);
+
             // format = name_stripe
             payload *get = malloc(sizeof(payload));
             char fileLabel[10];
