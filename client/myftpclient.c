@@ -302,11 +302,13 @@ int main(int argc, char **argv)
               // check for errors
               if (bytes < 0 || bytes < settings->block_size)
               {
-                printf("Something went wrong...\n");
-                printf("ERRORRR: %d", bytes);
+                printf("\n\nFAILURE\t Stripe %d of %d\t Server: %d\t Recieved %ld Bytes...\n\n", currentStripe, numStripes, server_no, bytes);
+                printf("Text: \n%s\n", getBlock);
                 exit(0);
               }
             }
+            printf("\n\nSuccess\t Stripe %d of %d\t Server: %d\t Recieved %ld Bytes...\n\n", currentStripe, numStripes, server_no, bytes);
+            printf("Text: \n%.*s\n", 500, getBlock);
             memcpy(stripeList[currentStripe].blocks[server_no].data, getBlock, settings->block_size);
 
             gotBlocks++;
@@ -423,7 +425,7 @@ int main(int argc, char **argv)
     }
 
     // encode file data into stripes
-    for (int i = 0; i < numStripes; i++)
+    for (int i = 0; i < (numStripes - zeroBlocks); i++)
     {
       for (int j = 0; j < settings->k; j++)
       {
@@ -473,7 +475,6 @@ int main(int argc, char **argv)
             recv(settings->sd[k], serv, sizeof(payload), 0);
             int server_no;
             server_no = ntohs(serv->server_no) - 1;
-            printf("SERVER: %d\t", server_no);
 
             // send fileName and fileSize
             payload *put = malloc(sizeof(payload));
@@ -499,9 +500,7 @@ int main(int argc, char **argv)
               // check for errors
               if (bytes < 0)
               {
-                printf("Something went wrong...\n");
-                printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
-                printf("BYTES: %d\n", bytes);
+                printf("\n\nSomething went wrong...\t Stripe %d of %d\t Server: %d\t Recieved %ld Bytes...\n\n", currentStripe, numStripes, server_no, bytes);
                 exit(0);
               }
             }
