@@ -513,7 +513,8 @@ int main(int argc, char **argv)
             send(settings->sd[k], put, sizeof(payload), 0);
 
             // send block
-            long bytes = send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+            long bytes;
+            bytes = send(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
             printf("stripe: %d of %d | bytes:%ld | server_no: %d\n", currentStripe + 1, numStripes, bytes, server_no);
 
             // check for errors

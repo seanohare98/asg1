@@ -324,9 +324,10 @@ void *connection_handler(void *sDescriptor)
       fWrite = fopen(targetFile, "ab");
 
       // get block
+      long bytes;
       unsigned char *getBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
-      long bytes = recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
-      printf("BYTES GOT: %ld\t", bytes);
+      bytes = recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+
       // check for errors
       if (bytes < 0)
       {
