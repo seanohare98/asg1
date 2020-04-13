@@ -520,6 +520,7 @@ int main(int argc, char **argv)
             if (bytes < 0)
             {
               printf("Something went wrong...\n");
+              printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
               exit(0);
             }
 

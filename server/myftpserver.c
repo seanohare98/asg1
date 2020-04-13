@@ -324,23 +324,21 @@ void *connection_handler(void *sDescriptor)
       fWrite = fopen(targetFile, "ab");
 
       // get block
-      long bytes;
-      long bytes_read = 0;
       unsigned char *getBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
-      while (bytes_read < data.settings->block_size)
+      long bytes = recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+      printf("BYTES GOT: %ld\t", bytes);
+      // check for errors
+      if (bytes < 0)
       {
-        bytes = recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
-
-        // check for errors
-        if (bytes < 0)
-        {
-          printf("Somethings went wrong...\t\t");
-          closeSocket = 1;
-          break;
-        }
-        bytes_read += fwrite(getBlock, sizeof(unsigned char), bytes, fWrite);
-        printf("BYTES GOT: %ld and BYTES READ : %ld", bytes, bytes_read);
+        printf("Somethings went wrong...\t\t");
+        closeSocket = 1;
+        break;
       }
+
+      long bytes_read = fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
+
+      printf("BYTES GOT: %ld and BYTES READ : %ld\n", bytes, bytes_read);
+
       fclose(fWrite);
 
       // write metadata and close connection
