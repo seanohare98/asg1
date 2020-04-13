@@ -351,7 +351,7 @@ int main(int argc, char **argv)
       }
 
       // write blocks (exclude zero blocks)
-      for (int j = 0; j < (settings->k - zeroBlocks); j++)
+      for (int j = 0; j < settings->k; j++)
       {
         // last block case
         if ((i == numStripes - 1) && (j == settings->k - zeroBlocks - 1))
