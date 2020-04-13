@@ -290,7 +290,8 @@ int main(int argc, char **argv)
 
             // recieve serverId and block data
             recv(settings->sd[k], get, sizeof(payload), 0);
-            int server_no = ntohl(get->server_no) - 1;
+            int server_no = ntohs(get->server_no) - 1;
+            printf("SERVER: %d\t", server_no);
 
             // get block
             long bytes = 0;
@@ -300,9 +301,10 @@ int main(int argc, char **argv)
               bytes += recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
 
               // check for errors
-              if (bytes < 0)
+              if (bytes < 0 || bytes < settings->block_size)
               {
                 printf("Something went wrong...\n");
+                printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
                 exit(0);
               }
             }
@@ -412,25 +414,11 @@ int main(int argc, char **argv)
       for (int b = 0; b < settings->n; b++)
       {
         stripeList[idx].blocks[b].data = malloc(sizeof(unsigned char) * settings->block_size);
-        // printf("Stripe %d Block %d data = %p\t", idx, b, stripeList[idx].blocks[b].data);
-        // printf("%ld \n", malloc_usable_size(stripeList[idx].blocks[b].data));
       }
       stripeList[idx].data_block = &stripeList[idx].blocks[0];
       stripeList[idx].parity_block = &stripeList[idx].blocks[settings->k];
       stripeList[idx].encode_matrix = malloc(sizeof(uint8_t) * (settings->n * settings->k));
       stripeList[idx].table = malloc(sizeof(uint8_t) * (32 * settings->k * (settings->n - settings->k)));
-      // for (int a = 0; a < settings->k; a++)
-      // {
-      //   printf("Stripe %d data_block %d data = %p\t", idx, a, stripeList[idx].data_block[a].data);
-      //   printf("%ld \n", malloc_usable_size(stripeList[idx].data_block[a].data));
-      // }
-
-      // for (int c = 0; c < (settings->n - settings->k); c++)
-      // {
-      //   printf("Stripe %d parity_block %d data = %p\t", idx, c, stripeList[idx].parity_block[c].data);
-      //   printf("%ld \n", malloc_usable_size(stripeList[idx].parity_block[c].data));
-      // }
-      //printf("Number of Stripes: %d\t Empty Space: %f\t Zero Blocks: %d\n", numStripes, emptySize, zeroBlocks);
     }
 
     // encode file data into stripes
@@ -499,12 +487,12 @@ int main(int argc, char **argv)
             while (bytes < settings->block_size)
             {
               bytes += send(settings->sd[k], stripeList[currentStripe].blocks[k].data, sizeof(unsigned char) * settings->block_size, 0);
-              printf("stripe: %d/%d | bytes:%ld | tblock_size: %ld\n", currentStripe + 1, numStripes, bytes, settings->block_size);
 
               // check for errors
               if (bytes < 0)
               {
                 printf("Something went wrong...\n");
+                printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
                 exit(0);
               }
             }

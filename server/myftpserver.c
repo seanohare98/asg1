@@ -224,7 +224,7 @@ void *connection_handler(void *sDescriptor)
 
       // send server ID
       struct readFile *sendServerNo = malloc(sizeof(struct readFile));
-      sendServerNo->server_no = (unsigned int)htonl(data.settings->server_id);
+      sendServerNo->server_no = htons(data.settings->server_id);
       send(data.sd, sendServerNo, sizeof(struct readFile), 0);
 
       //clear file and open for writing
@@ -372,4 +372,4 @@ void *connection_handler(void *sDescriptor)
   threads.size--;
   pthread_mutex_unlock(&thread_mutex);
   return 0;
-}
+};

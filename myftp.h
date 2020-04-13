@@ -6,7 +6,6 @@
 #include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <malloc.h>
 #include <netinet/in.h>
 #include <errno.h>
 #include <stdbool.h>
