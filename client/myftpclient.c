@@ -231,7 +231,7 @@ int main(int argc, char **argv)
           set++;
         }
       }
-
+      printf("TOTAL SET: %d\n", set);
       // use select
       select(max_sd + 1, NULL, &write_fds, NULL, NULL);
 
@@ -456,7 +456,7 @@ int main(int argc, char **argv)
     {
       // clear fd set
       FD_ZERO(&write_fds);
-      int set;
+      int set = 0;
       // set fd set
       for (int j = 0; j < available; j++)
       {
@@ -467,7 +467,7 @@ int main(int argc, char **argv)
           set++;
         }
       }
-
+      printf("TOTAL SET: %d\n", set);
       // use select
       select(max_sd + 1, NULL, &write_fds, NULL, NULL);
 
@@ -483,7 +483,7 @@ int main(int argc, char **argv)
           }
           else
           {
-            printf("loop: %d \n", k);
+            printf("loop: %d \t", k);
             // send request
             struct message_s *convertedPacket = htonp(packet);
             send(settings->sd[k], convertedPacket, sizeof(struct message_s), 0);
