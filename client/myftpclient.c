@@ -196,7 +196,7 @@ int main(int argc, char **argv)
       // needFileSize = 2 indicates stripes need to be built
       if (needFileSize == 2)
       {
-        printf("BUILDING.\n");
+        printf("BUILDING STRIPES\n");
         numStripes = ceil((double)fileSize / (settings->block_size * settings->k));
         emptySize = (numStripes * settings->k * settings->block_size) - fileSize;
         emptySize /= settings->block_size;
@@ -224,7 +224,7 @@ int main(int argc, char **argv)
       // set active connections
       for (int j = 0; j < available; j++)
       {
-        printf("didGet[%d] == %d\n", j, settings->sd[j]);
+        printf("didGet[%d] == %d\t", j, settings->sd[j]);
         if (didGet[j] != 1)
         {
           FD_SET(settings->sd[j], &write_fds);
@@ -300,6 +300,7 @@ int main(int argc, char **argv)
             payload *serverData = malloc(sizeof(payload));
             recv(settings->sd[k], serverData, sizeof(payload), 0);
             int server_no = ntohs(serverData->server_no) - 1;
+            printf("SERVERNO RECIEVED: %d", server_no);
 
             // get block
             long bytes = recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
@@ -308,6 +309,7 @@ int main(int argc, char **argv)
             if (bytes < 0)
             {
               printf("Something went wrong...\n");
+              printf("Error: %s (Errno:%d)\n", strerror(errno), errno);
               exit(0);
             }
 
@@ -462,7 +464,7 @@ int main(int argc, char **argv)
       // set fd set
       for (int j = 0; j < available; j++)
       {
-        printf("j=%d\t didSend[j]= %d \n", j, didSend[j]);
+        printf("j=%d\t didSend[j]= %d \t", j, didSend[j]);
         if (didSend[j] != 1)
         {
           FD_SET(settings->sd[j], &write_fds);
@@ -493,7 +495,7 @@ int main(int argc, char **argv)
             // recieve server_no
             payload *serverData = malloc(sizeof(payload));
             recv(settings->sd[k], serverData, sizeof(payload), 0);
-            int server_no = ntohl(serverData->server_no) - 1;
+            int server_no = ntohs(serverData->server_no) - 1;
 
             // send fileName and fileSize
             payload *put = malloc(sizeof(payload));

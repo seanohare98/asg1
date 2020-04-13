@@ -215,13 +215,15 @@ void *connection_handler(void *sDescriptor)
       struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
       recv(data.sd, get, sizeof(struct readFile), 0);
+      printf("FILENAME: %s", get->fileName);
 
       // send server ID
       struct readFile *sendServerNo = malloc(sizeof(struct readFile));
       sendServerNo->server_no = htons(data.settings->server_id);
       send(data.sd, sendServerNo, sizeof(struct readFile), 0);
+      printf("SERVER NO SEND: %d", data.settings->server_id);
 
-      //clear file and open for writing
+      // open file for reading
       FILE *fRead;
       char filePath[1024] = "./data/";
       char targetFile[255];
