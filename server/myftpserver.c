@@ -247,7 +247,7 @@ void *connection_handler(void *sDescriptor)
       }
 
       fclose(fRead);
-      printf("BLOCK to client:\n%s\n", replyBlock);
+      printf("Text: \n%.*s\n", 500, replyBlock);
 
       // send block
       long bytes_sent = 0;

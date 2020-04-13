@@ -295,7 +295,7 @@ int main(int argc, char **argv)
             // get block
             long bytes = 0;
             unsigned char *getBlock = malloc(sizeof(unsigned char) * settings->block_size);
-            recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
+            bytes = recv(settings->sd[k], stripeList[currentStripe].blocks[server_no].data, sizeof(unsigned char) * settings->block_size, 0);
             // while (bytes < settings->block_size)
             // {
             //   bytes += recv(settings->sd[k], getBlock, sizeof(unsigned char) * settings->block_size, 0);
@@ -310,7 +310,7 @@ int main(int argc, char **argv)
             // memcpy(stripeList[currentStripe].blocks[server_no].data, getBlock, settings->block_size);
 
             printf("\n\nSuccess\t Stripe %d of %d\t Server: %d\t Recieved %ld Bytes...\n\n", currentStripe, numStripes, server_no, bytes);
-            printf("Text: \n%.*s\n", 500, getBlock);
+            printf("Text: \n%.*s\n", 100, getBlock);
 
             gotBlocks++;
             didGet[k] = 1;
