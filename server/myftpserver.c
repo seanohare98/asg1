@@ -245,22 +245,26 @@ void *connection_handler(void *sDescriptor)
         pthread_mutex_unlock(&thread_mutex);
         break;
       }
+
       fclose(fRead);
       printf("BLOCK to client:\n%s\n", replyBlock);
+
       // send block
       long bytes_sent = 0;
-      while (bytes_sent < data.settings->block_size)
-      {
-        bytes_sent = send(data.sd, replyBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+      send(data.sd, replyBlock, sizeof(unsigned char) * data.settings->block_size, 0);
 
-        if (bytes_sent < 0 || bytes_sent < data.settings->block_size)
-        {
-          printf("Somethings went wrong...\t\t");
-          printf("Bytes: %d", bytes_sent);
-          closeSocket = 1;
-          break;
-        }
-      }
+      // while (bytes_sent < data.settings->block_size)
+      // {
+      //   bytes_sent = send(data.sd, replyBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+
+      //   if (bytes_sent < 0 || bytes_sent < data.settings->block_size)
+      //   {
+      //     printf("Somethings went wrong...\t\t");
+      //     printf("Bytes: %d", bytes_sent);
+      //     closeSocket = 1;
+      //     break;
+      //   }
+      // }
 
       // close connection
       if (get->done == 'y')
@@ -339,20 +343,23 @@ void *connection_handler(void *sDescriptor)
       int bytes;
       long bytes_read = 0;
       unsigned char *getBlock = malloc(sizeof(unsigned char) * data.settings->block_size);
-      while (bytes_read < data.settings->block_size)
-      {
-        bytes = recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+      recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+      fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
 
-        // check for errors
-        if (bytes < 0)
-        {
-          printf("Somethings went wrong...\t\t");
-          printf("BYTES: %d\n", bytes);
-          closeSocket = 1;
-          break;
-        }
-        bytes_read += fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
-      }
+      // while (bytes_read < data.settings->block_size)
+      // {
+      //   bytes = recv(data.sd, getBlock, sizeof(unsigned char) * data.settings->block_size, 0);
+
+      //   // check for errors
+      //   if (bytes < 0)
+      //   {
+      //     printf("Somethings went wrong...\t\t");
+      //     printf("BYTES: %d\n", bytes);
+      //     closeSocket = 1;
+      //     break;
+      //   }
+      //   bytes_read += fwrite(getBlock, sizeof(unsigned char), data.settings->block_size, fWrite);
+      // }
       fclose(fWrite);
 
       // write metadata and close connection
