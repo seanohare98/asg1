@@ -246,7 +246,7 @@ void *connection_handler(void *sDescriptor)
         break;
       }
       fclose(fRead);
-
+      printf("BLOCK to client:\n%s\n", replyBlock);
       // send block
       long bytes_sent = 0;
       while (bytes_sent < data.settings->block_size)
@@ -255,8 +255,8 @@ void *connection_handler(void *sDescriptor)
 
         if (bytes_sent < 0 || bytes_sent < data.settings->block_size)
         {
-          printf("ERRORRRR: %d", bytes_sent);
           printf("Somethings went wrong...\t\t");
+          printf("Bytes: %d", bytes_sent);
           closeSocket = 1;
           break;
         }

@@ -218,24 +218,24 @@ int main(int argc, char **argv)
       }
 
       // clear fd set
-      FD_ZERO(&read_fds);
+      FD_ZERO(&write_fds);
 
       // set active connections
       for (int j = 0; j < available; j++)
       {
         if (didGet[j] != 1)
         {
-          FD_SET(settings->sd[j], &read_fds);
+          FD_SET(settings->sd[j], &write_fds);
         }
       }
 
       // use select
-      select(max_sd + 1, NULL, &read_fds, NULL, NULL);
+      select(max_sd + 1, NULL, &write_fds, NULL, NULL);
 
       // check socket descriptors
       for (int k = 0; k < available; k++)
       {
-        if (FD_ISSET(settings->sd[k], &read_fds))
+        if (FD_ISSET(settings->sd[k], &write_fds))
         {
           // needFileSize = 1 indicates client should request fileSize
           if (needFileSize == 1)
@@ -291,7 +291,6 @@ int main(int argc, char **argv)
             // recieve serverId and block data
             recv(settings->sd[k], get, sizeof(payload), 0);
             int server_no = ntohs(get->server_no) - 1;
-            printf("SERVER: %d\t", server_no);
 
             // get block
             long bytes = 0;
