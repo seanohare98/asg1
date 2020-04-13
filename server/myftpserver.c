@@ -211,15 +211,9 @@ void *connection_handler(void *sDescriptor)
     // GET_PROTOCOL
     else if (convertedPacket->type == ((unsigned char)0xB1))
     {
-      char filePath[1024] = "./data/";
-      // char pathLabel[10];
-      // sprintf(pathLabel, "%d", data.settings->server_id);
-      // strcat(filePath, pathLabel);
-      // strcat(filePath, "/");
+      // recieve fileName
       struct readFile *get = malloc(sizeof(struct readFile));
       memset(get->fileName, '\0', sizeof(get->fileName));
-
-      // recieve fileName
       recv(data.sd, get, sizeof(struct readFile), 0);
 
       // send server ID
@@ -229,6 +223,7 @@ void *connection_handler(void *sDescriptor)
 
       //clear file and open for writing
       FILE *fRead;
+      char filePath[1024] = "./data/";
       char targetFile[255];
       strcpy(targetFile, filePath);
       strcat(targetFile, get->fileName);
@@ -264,7 +259,7 @@ void *connection_handler(void *sDescriptor)
       // close connection
       if (get->done == 'y')
       {
-        printf("GET_PROTOCOL\t\t");
+        printf("GET_PROTOCOL\t\t\t");
         closeSocket = 1;
         break;
       }
@@ -307,20 +302,21 @@ void *connection_handler(void *sDescriptor)
     // PUT_PROTOCOL
     else if (convertedPacket->type == ((unsigned char)0xC1))
     {
-      char filePath[1024] = "./data/";
-      // char pathLabel[10];
-      // sprintf(pathLabel, "%d", data.settings->server_id);
-      // strcat(filePath, pathLabel);
-      // strcat(filePath, "/");
-      struct readFile *get = malloc(sizeof(struct readFile));
-      memset(get->fileName, '\0', sizeof(get->fileName));
+
+      //send server_no to client
+      struct readFile *sendServerNo = malloc(sizeof(struct readFile));
+      sendServerNo->server_no = (unsigned int)htonl(data.settings->server_id);
+      send(data.sd, sendServerNo, sizeof(struct readFile), 0);
 
       // receive fileName and fileSize
+      struct readFile *get = malloc(sizeof(struct readFile));
+      memset(get->fileName, '\0', sizeof(get->fileName));
       recv(data.sd, get, sizeof(struct readFile), 0);
       long fileSize = ntohl(get->fileSize);
 
       // clear file and open for writing
       FILE *fClear, *fWrite;
+      char filePath[1024] = "./data/";
       char targetFile[255];
       strcpy(targetFile, filePath);
       strcat(targetFile, get->fileName);
