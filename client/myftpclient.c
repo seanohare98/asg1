@@ -345,7 +345,7 @@ int main(int argc, char **argv)
     }
 
     // clear file and open for writing
-    FILE *writeFile = fopen("herewego.txt", "ab");
+    FILE *writeFile = fopen(argv[3], "ab");
     int needsDecode = 0;
     // check for failed blocks
     for (int idx = 0; idx < settings->k; idx++)
